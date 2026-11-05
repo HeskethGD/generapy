@@ -1,3 +1,6 @@
+.. meta::
+   :google-site-verification: _CuYw6k8Cx3VBDwMCXvBAafSlPbKNIyzoypPK-dTUk0
+
 Generapy documentation
 ======================
 
