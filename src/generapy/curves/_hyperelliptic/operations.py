@@ -149,26 +149,33 @@ def _hyperelliptic_abel_map(
     target_eps = +ctx.eps
     quadrature_guard = 20
     cancellation_guard = 40 if second_kind else 0
-    with ctx.extraprec(quadrature_guard + cancellation_guard):
+    # Select the path at the same precision for both differential kinds.
+    # Extra bits needed for second-kind cancellation must not alter the lift.
+    # This also matches the finite-base first-kind shortcut's routing precision.
+    with ctx.extraprec(quadrature_guard):
         targets = _normalize_abel_targets(ctx, target)
         coefficients = _hyperelliptic_coefficients(ctx, coefficients)
+        _, route_roots, _, _, _, _ = _hyperelliptic_curve_data(
+            ctx, coefficients, method)
+        _validate_abel_targets(ctx, coefficients, targets, target_eps)
+        anchors = []
+        for x, y in targets:
+            index = _target_branch_index(ctx, x, y, route_roots, target_eps)
+            anchors.append((index if index is not None else
+                            _admissible_branch_vertex(ctx, x, route_roots, target_eps),
+                            index is not None))
+    with ctx.extraprec(quadrature_guard + cancellation_guard):
         (curve_data, intervals, b_sign, branch_values,
          second_coefficients, second_branch_values) = _hyperelliptic_abel_data(
              ctx, coefficients, method, second_kind)
         (coefficients, roots, _unused_root_tolerance, use_real_method,
          genus, even_degree) = curve_data
-        _validate_abel_targets(ctx, coefficients, targets, target_eps)
-
         monomial_count = 2 * genus + 1 if second_kind else genus
         result = ctx.zeros(genus, 1)
         if second_kind:
             second_result = ctx.zeros(genus, 1)
-        for x, y in targets:
-            branch_index = _target_branch_index(
-                ctx, x, y, roots, target_eps)
-            if branch_index is None:
-                branch_index = _admissible_branch_vertex(
-                    ctx, x, roots, target_eps)
+        for (x, y), (branch_index, at_branch) in zip(targets, anchors):
+            if not at_branch:
                 final_monomials = _branch_target_integrals(
                     ctx, roots, coefficients[-1], branch_index, x, y,
                     monomial_count, target_eps)

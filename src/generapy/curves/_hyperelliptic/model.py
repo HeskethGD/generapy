@@ -163,7 +163,7 @@ def _target_branch_index(ctx, x, y, roots, target_eps):
 
 
 def _admissible_branch_vertex(ctx, target, roots, target_eps):
-    """Choose the nearest branch point with an unobstructed final segment."""
+    """Choose the nearest unobstructed branch, breaking numerical ties by index."""
     path_tolerance = 100 * ctx.sqrt(target_eps)
     candidates = []
     for index, branch in enumerate(roots):
@@ -182,4 +182,9 @@ def _admissible_branch_vertex(ctx, target, roots, target_eps):
             candidates.append((abs(difference), index))
     if not candidates:
         raise ValueError("failed to find a branch-point path to target")
-    return min(candidates)[1]
+    nearest = min(distance for distance, index in candidates)
+    # Conjugate branches can be exactly equidistant from a real target.
+    # Guard-bit root errors must not decide which cycle lift is returned.
+    tolerance = 100 * target_eps * max(ctx.one, nearest)
+    return min(index for distance, index in candidates
+               if distance <= nearest + tolerance)

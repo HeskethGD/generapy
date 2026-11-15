@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- First- and second-kind hyperelliptic Abel maps now choose branch anchors at
+  a shared routing precision, with deterministic distance ties. This prevents
+  incompatible cycle lifts at equidistant conjugate branches (issue #11),
+  including in the Baker–Akhiezer curve route.
 - Chart continuation now checks local sheet separation and full-step/half-step
   consistency, preventing the silent branch switch reported in issue #4.
   Ambiguous quadrature nodes are refined and checked against endpoint branch
