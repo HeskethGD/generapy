@@ -160,87 +160,58 @@ derivatives where sigma itself vanishes. The
 Baker–Akhiezer functions
 ........................
 
-``baker_akhiezer`` defaults to the spectrally normalized one-point
-Baker–Akhiezer function for odd-degree hyperelliptic curves. Its argument
-``u`` is a free Jacobian vector; the separate ``point`` is a finite point
-on the curve. For example::
+Baker–Akhiezer functions are functions on algebraic curves with prescribed
+poles and exponential behavior, used to construct spectral eigenfunctions
+and finite-gap solutions of integrable equations [Krichever1977]_. Their
+sigma-function representation builds on classical Abelian function theory;
+see [Baker1907]_.
 
-   from generapy import Curve, baker_akhiezer
+Generapy supports hyperelliptic spectral normalization (the default) and
+reference normalization, which sets the value at a chosen argument to one.
+Both support ordinary directional derivatives.
+
+**A hyperelliptic spectral value.** Supply a curve and a spectral point
+:math:`P=(x,y)` on it. Here ``normalization="spectral"`` is shown explicitly;
+it can be omitted::
+
    from mpmath import mp
+   from generapy import Curve, baker_akhiezer, baker_akhiezer_jet
 
+   mp.dps = 30
    curve = Curve({(0, 2): 1, (3, 0): -4, (1, 0): 4})
-   value = baker_akhiezer([mp.mpf('0.3')],
-                                  curve=curve, point=(2, mp.sqrt(24)))
+   point = (2, mp.sqrt(24))
+   u = [mp.mpf('0.3')]
+   value = baker_akhiezer(u, curve=curve, point=point,
+                          normalization="spectral")
 
-The automatic curve route supplies compatible first- and second-kind Abel
-integrals from the unique point at infinity, the period data and the
-Riemann characteristic. A sparse polynomial mapping is also accepted.
-``reduce=True`` applies compatible cycle shifts to both integral vectors.
-When supplying explicit vectors, use the same lift, differential basis,
-marking, characteristic and reduction choice throughout.
+**A reference-normalized value.** Select ``normalization="reference"`` and
+provide the argument ``reference=u0`` where the function should equal one::
 
-The denominator contains both ``sigma(u)`` and the sharp derivative at the
-spectral point's Abel image. Both must be nonzero. This sharp normalization
-depends on the canonical hyperelliptic sigma scale; a common sigma multiplier
-does not cancel.
+   u0 = [mp.mpf('0.2')]
+   value = baker_akhiezer(u, curve=curve, point=point,
+                          normalization="reference", reference=u0)
 
-Reference normalization
-~~~~~~~~~~~~~~~~~~~~~~~
+**Using supplied Abel integrals.** If the Abel shift :math:`A(P)` and
+second-kind vector :math:`R(P)` are already available, pass their vectors
+as ``shift`` and ``second_kind`` instead of ``point``. The curve still
+supplies the period data in this example::
 
-``normalization="reference"`` sets the value at ``reference=u0`` to one:
+   shift = curve.abel_map_kind_1(point).value
+   second_kind = curve.abel_map_kind_2(point).value
+   value = baker_akhiezer(u, curve=curve, shift=shift, second_kind=second_kind,
+                          normalization="reference", reference=u0)
 
-.. math::
+**Directional derivatives.** Request the value and derivatives through order
+three along :math:`u+t\,d`, with the reference argument held fixed::
 
-   B(u;u_0)=\frac{\sigma(A-u)\sigma(u_0)}
-   {\sigma(u)\sigma(A-u_0)}\exp(-R^T(u-u_0)).
+   jet = baker_akhiezer_jet(u, curve=curve, point=point,
+                           normalization="reference", reference=u0,
+                           direction=[1], order=3)
 
-On their common regular domain this equals :math:`\Psi(P,u)/\Psi(P,u_0)`.
-The sharp factor and the multiplicative sigma scale cancel. For example::
-
-   value = baker_akhiezer([mp.mpf('0.3')], curve=curve,
-                          point=(2, mp.sqrt(24)), normalization="reference",
-                          reference=[mp.mpf('0.2')])
-
-For supplied data, use ``shift=A`` and ``second_kind=R`` with either explicit
-periods or a ``curve`` carrying compatible differential bases. The shift is
-a Jacobian vector, while ``point`` denotes an affine point on the curve.
-The reference formula also accommodates other curve data, including custom
-trigonal bases, without requiring a canonical scalar sigma normalization.
-Its spectral interpretation requires compatible lifts, exponential data and
-differential conventions; arbitrary vectors only define a sigma ratio.
-
-Both reference sigma factors and the current denominator must be nonzero.
-The evaluator reports computed zeros and known exact origin zeros without
-applying a numerical cutoff. Evaluations near a divisor remain sensitive to
-precision and conditioning. The literal argument :math:`A-u` is used for every
-characteristic; replacing it by :math:`u-A` requires an appropriate parity
-identity. Opposite signs of the shift and second-kind vector do not by
-themselves certify a divisor-theoretic dual BA function.
-
-Ordinary directional derivatives
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-``baker_akhiezer_jet`` accepts the same data and normalization choices. Supply
-``direction=d`` and ``order=n`` to obtain a tuple of ordinary derivatives of
-:math:`B(u+td)` at :math:`t=0`, starting with its value. The reference vector
-is held fixed. Both coordinate directions and dense Abel directions are
-accepted. For example::
-
-   from generapy import baker_akhiezer_jet
-
-   jet = baker_akhiezer_jet([mp.mpf('0.3')], curve=curve,
-                           point=(2, mp.sqrt(24)), direction=[1], order=3,
-                           normalization="reference", reference=[mp.mpf('0.2')])
-
-The entries are derivatives, not factorial-scaled Taylor coefficients.
-Ordinary quotient differentiation avoids division by a vanishing numerator.
-The :doc:`reference BA example <examples/reference_ba>` checks a finite first
-derivative at an exact numerator zero. Identical evaluated theta requests are
-reused by a bounded cache, separated by context, precision, characteristic and
-derivative request; callers do not need to manage shared denominator state.
-
-The :doc:`genus-two BA example <examples/baker_akhiezer>` checks the product
-on opposite sheets against the Bolza polynomial [BEH2005]_.
+The :doc:`genus-two spectral example <examples/baker_akhiezer>` checks the
+product on opposite sheets. The :doc:`reference derivative example
+<examples/reference_ba>` evaluates a BA zero with a finite, nonzero first
+derivative. Formulas, data conventions and parameter requirements follow.
 
 .. autofunction:: generapy.baker_akhiezer
 

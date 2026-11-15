@@ -476,50 +476,73 @@ def baker_akhiezer(u, shift=None, second_kind=None, omega=None,
                     tau=None, kappa=None, characteristic=None, *,
                     curve=None, point=None, reduce=False,
                     normalization="spectral", reference=None, ctx=None):
-    r"""Evaluate a spectral or reference-normalized Baker--Akhiezer function.
+    r"""Evaluate a Baker--Akhiezer function with spectral or reference normalization.
 
-    With ``normalization="spectral"`` (the default), evaluate
+    ``u`` is a Jacobian argument vector. Choose one normalization and one
+    of the data routes described below.
+
+    .. rubric:: Hyperelliptic spectral normalization (default)
+
+    Set ``normalization="spectral"``, or omit it, to evaluate
 
     .. math::
 
         \Psi(P,u)=\frac{\sigma(A(P)-u)}
         {\sigma_\sharp(A(P))\sigma(u)}\exp(-R(P)^T u).
 
-    ``curve`` and the affine spectral ``point=(x,y)`` derive the Abel shift
-    A, second-kind vector R and period data together. This route requires
-    the automatic odd-degree hyperelliptic basis, with infinity as origin.
-    ``reduce`` applies compatible cycle shifts to both integrals. Alternatively,
-    supply ``shift=A``, ``second_kind=R`` and compatible explicit periods.
-    The sharp factor is sigma in genus one and its derivative with multi-index
-    ``(0,1,0,1,...)`` otherwise, in the automatic coordinate order. Spectral
-    normalization uses the canonical hyperelliptic sigma scale. See
-    [Onishi2005]_, Definition 6.1 and Proposition 6.6, and [BEH2005]_, (3.3).
-    The exponential uses the BEL sign convention, as in [CEEK2000]_,
-    equations (3.21)--(3.22).
+    This is the odd-degree hyperelliptic convention, with infinity as Abel
+    origin and the canonical hyperelliptic sigma scale. Leave ``reference``
+    unset in this mode. The sharp factor is :math:`\sigma` in genus one and
+    the sigma derivative with multi-index ``(0,1,0,1,...)`` otherwise, in the
+    automatic coordinate order. See [Onishi2005]_, Definition 6.1 and
+    Proposition 6.6, and [BEH2005]_, equation (3.3). The exponential uses
+    the BEL sign convention described in [CEEK2000]_, equations (3.21)--(3.22).
 
-    With ``normalization="reference"`` and ``reference=u0``, evaluate
+    .. rubric:: Reference normalization
+
+    Set ``normalization="reference"`` and supply ``reference=u0`` to evaluate
 
     .. math::
 
         B(u;u_0)=\frac{\sigma(A-u)\sigma(u_0)}
         {\sigma(u)\sigma(A-u_0)}\exp(-R^T(u-u_0)).
 
-    This has B(u0;u0)=1 and agrees with Psi(u)/Psi(u0) on their common
-    regular domain. The sharp factor and multiplicative sigma scale cancel;
-    theta scaling is used internally. This route also accepts explicit shifts
-    and second-kind vectors with a custom-basis ``curve``, or explicit period
-    data for other curves. All vectors, periods, characteristic and exponential
-    data must use compatible bases, lifts and conventions. Supplying arbitrary
-    vectors does not establish a spectral BA interpretation. ``point`` denotes
-    a curve point; ``shift`` denotes its Abel vector. They cannot be combined.
+    Here :math:`A` is ``shift`` and :math:`R` is ``second_kind``. This gives
+    :math:`B(u_0;u_0)=1` and agrees with :math:`\Psi(P,u)/\Psi(P,u_0)` on
+    their common regular domain. The sharp factor and multiplicative sigma
+    scale cancel. Reference normalization also accepts compatible supplied
+    data for other curves, including custom differential bases.
 
-    Sigma(u), and for reference normalization both reference sigma factors,
-    must be nonzero. Spectral normalization also requires a nonzero sharp
-    factor. Computed zeros and known origin zeros raise ``ZeroDivisionError``;
-    near a divisor, increase precision or choose another regular chart. No
-    numerical zero cutoff is applied. The reference construction uses A-u
-    literally and makes no assumption about sigma parity or a dual BA function.
-    ``ctx`` follows the same conventions as :func:`kleinian_sigma`.
+    .. rubric:: Curve points and supplied Abel data
+
+    * With ``curve=curve_or_mapping`` and ``point=(x,y)``, the evaluator
+      computes :math:`A(P)`, :math:`R(P)`, periods and characteristic together.
+      This automatic point route uses the odd-degree hyperelliptic basis.
+      ``point`` is an affine curve point, rather than a Jacobian vector.
+      ``reduce=True`` applies compatible cycle shifts to both Abel integrals.
+    * With ``shift=A`` and ``second_kind=R``, supply the Abel integral vectors
+      directly. These are the ``value`` fields from
+      ``Curve.abel_map_kind_1`` and ``Curve.abel_map_kind_2``, evaluated at the
+      same point with the same lift and reduction choice. Supply either
+      ``curve`` for its period data, or explicit ``omega``, ``tau``, ``kappa``
+      and the appropriate ``characteristic``. Spectral normalization requires
+      the hyperelliptic basis and characteristic; reference normalization
+      allows compatible custom-basis curve or explicit period data.
+
+    Do not combine ``point`` with ``shift`` or ``second_kind``, or ``curve``
+    with explicit period matrices or characteristic. ``reduce`` is available
+    with the automatic point route. All supplied vectors, periods and
+    exponential data must share differential, coordinate and path conventions
+    to represent the intended spectral BA function. ``ctx`` follows the same
+    convention as :func:`kleinian_sigma`.
+
+    .. rubric:: Regularity
+
+    Both modes require :math:`\sigma(u)\ne0`. Spectral normalization also
+    requires :math:`\sigma_\sharp(A)\ne0`; reference normalization requires
+    :math:`\sigma(u_0)\ne0` and :math:`\sigma(A-u_0)\ne0`. Known zero
+    normalizers raise ``ZeroDivisionError``. Near these divisors, choose a
+    regular argument or reference and sufficient working precision.
     """
     return _baker_akhiezer_evaluate(
         u, shift, second_kind, omega, tau, kappa, characteristic,
@@ -531,21 +554,28 @@ def baker_akhiezer_jet(u, shift=None, second_kind=None, omega=None,
                         tau=None, kappa=None, characteristic=None, *,
                         direction, order, curve=None, point=None, reduce=False,
                         normalization="spectral", reference=None, ctx=None):
-    r"""Return ordinary directional BA derivatives through ``order``.
+    r"""Evaluate ordinary directional derivatives of a Baker--Akhiezer function.
 
-    The returned tuple contains the derivatives at t=0 of B(u+t*direction),
-    including the value at index zero. Entries are ordinary derivatives,
-    not Taylor coefficients. The reference argument is held fixed.
-    ``direction`` is a vector in the same Abelian coordinates as ``u``.
-    ``order`` is a nonnegative integer.
+    Supply ``direction=d`` and ``order=n``. The returned tuple contains
 
-    Both normalizations and all data routes follow :func:`baker_akhiezer`.
-    Sigma jets are contracted along the supplied direction, and the quotient
-    is differentiated directly without dividing by its numerator. Numerator
-    zeros therefore allow finite ordinary derivatives; denominator and
-    reference normalizers must remain nonzero. The same conditioning limits
-    as the scalar evaluator apply. Repeated identical theta requests reuse
-    the bounded evaluation cache automatically.
+    .. math::
+
+        \begin{gathered}
+        \left(F(u),D_dF(u),\ldots,D_d^nF(u)\right),\\
+        D_d=\sum_i d_i\frac{\partial}{\partial u_i}.
+        \end{gathered}
+
+    where :math:`F=\Psi` for spectral normalization and :math:`F=B` for
+    reference normalization. These are ordinary derivatives along
+    :math:`u+t\,d` at :math:`t=0`, rather than factorial-scaled Taylor
+    coefficients. ``direction`` uses the same Abelian coordinates as ``u``;
+    ``order`` is a nonnegative integer. For reference normalization,
+    :math:`u_0` is held fixed.
+
+    The data routes and normalization parameters are the same as for
+    :func:`baker_akhiezer`. Both modes allow finite derivatives at numerator
+    zeros when the function is regular. See the
+    :doc:`reference derivative example </examples/reference_ba>`.
 
     **Example**::
 

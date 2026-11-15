@@ -56,6 +56,11 @@ implementations.
                 Society* 48(3) (2005), 705--742.
                 https://arxiv.org/abs/math/0105189
 
+.. [Krichever1977] I. M. Krichever. "Methods of algebraic geometry in the
+                   theory of non-linear equations". *Russian Mathematical
+                   Surveys* 32(6) (1977), 185--213.
+                   https://doi.org/10.1070/RM1977v032n06ABEH003862
+
 .. [BEH2005] H. W. Braden, V. Z. Enolskii and A. N. W. Hone.
    *Bilinear recurrences and addition formulae for hyperelliptic sigma functions*.
    Journal of Nonlinear Mathematical Physics **12**, Supplement 2 (2005), 46–62.
