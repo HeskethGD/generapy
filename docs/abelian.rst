@@ -182,9 +182,7 @@ marking, characteristic and reduction choice throughout.
 The denominator contains both ``sigma(u)`` and the sharp derivative at the
 spectral point's Abel image. Both must be nonzero. This sharp normalization
 depends on the canonical hyperelliptic sigma scale; a common sigma multiplier
-does not cancel. Custom differential bases, trigonal curves and even-degree
-hyperelliptic curves are outside this evaluator's automatic support.
-Reference-normalized modes and BA derivative jets are not provided by this API.
+does not cancel.
 
 The :doc:`genus-two BA example <examples/baker_akhiezer>` checks the product
 on opposite sheets against the Bolza polynomial [BEH2005]_.
@@ -192,4 +190,5 @@ on opposite sheets against the Bolza polynomial [BEH2005]_.
 .. autofunction:: generapy.kleinian_baker_akhiezer
 
 For the classical development of Abelian, theta, sigma, and multiply periodic
-functions, see [BEL1997]_, [CEEK2000]_, and [Onishi2005]_.
+functions, see [Baker1907]_, [BEL1997]_, [CEEK2000]_, [Onishi2005]_,
+and the references therein.

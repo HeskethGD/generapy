@@ -478,12 +478,8 @@ def kleinian_baker_akhiezer(u, abel=None, second_kind=None, omega=None,
     used here, :math:`2\eta=-\oint_a dr`. See [CEEK2000]_, equations (3.21)
     and (3.22).
 
-    For an odd-degree hyperelliptic curve, the automatic specialized path in
-    ``Curve.abel_map_kind_2`` uses the unique point
-    at infinity required by this standard spectral interpretation. Its even-degree base
-    point is instead finite; constructing a BA function with an essential
-    singularity at either of the two even-degree points at infinity requires
-    an additional marked-infinity convention.
+    This evaluator uses infinity-based Abel integrals on an odd-degree
+    hyperelliptic curve.
 
     """
     if curve is not None:
