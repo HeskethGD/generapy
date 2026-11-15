@@ -32,6 +32,8 @@ and this changelog is displayed in the documentation.
 
 ### Performance
 
+- Reuse evaluated theta values and derivative jets for identical requests in
+  bounded, context- and precision-aware caches. Large jets bypass retention.
 - Reuse immutable Gauss rules across repeated path and chart integrations,
   with bounded caches separated by numerical context and precision; construct
   cold rules using symmetric Legendre root iteration.

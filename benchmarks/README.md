@@ -18,6 +18,17 @@ benchmarks/
 
 ## Prerequisites
 
+To measure the evaluated theta-result cache on repeated and moving arguments,
+and sigma jets sharing a denominator across four shifts, run:
+
+```sh
+python -m benchmarks.rtheta.benchmark_evaluation_cache
+```
+
+This compares cached and uncached results with the same warm period setup and
+checks every returned derivative. Timings are local measurements; working-tree
+runs are marked experimental and are not release baselines.
+
 ### Required
 - Python 3.10+
 - generapy installed in development mode: `.venv/bin/pip install -e '.[develop]'`

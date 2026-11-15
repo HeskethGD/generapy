@@ -16,6 +16,8 @@
 # precision included in the cache identity. Derivative truncation radii use a
 # small bounded cache with shift norms rounded upward, so a cached radius is
 # conservative for every argument in its bucket.
+# A separate small result cache reuses identical argument/derivative requests.
+# Large jets bypass it so a few high-order calls cannot retain huge tensors.
 #
 # When a lattice-volume estimate predicts a worthwhile saving, a partial
 # Siegel reduction is applied using integer translations, unimodular basis
@@ -868,6 +870,19 @@ def _derivative_reduction_threshold(ctx, genus, degree, derivatives):
 
 
 def _rtheta_normalized_derivatives(ctx, z, tau_key, a, b, derivatives):
+    """Reuse immutable evaluated results, with bounded jet retention."""
+    if len(derivatives) > 128:
+        return _rtheta_evaluate(ctx, z, tau_key, a, b, derivatives)
+    return _rtheta_evaluation_cache(ctx, z, tau_key, a, b, derivatives)
+
+
+@ctx_lru_cache(maxsize=32)
+def _rtheta_evaluation_cache(ctx, z, tau_key, a, b, derivatives):
+    """Cache at most 32 requests of at most 128 components per context."""
+    return _rtheta_evaluate(ctx, z, tau_key, a, b, derivatives)
+
+
+def _rtheta_evaluate(ctx, z, tau_key, a, b, derivatives):
     """Evaluate normalized derivative requests with one selected traversal."""
     genus = len(z)
     max_degree = max(sum(derivative) for derivative in derivatives)
@@ -1059,6 +1074,9 @@ def rtheta(z, tau, characteristic=None, derivative=0, *, ctx=None):
     rapidly with the genus and requested precision. Automatic reduction can
     make many otherwise slow inputs practical, but general high-genus
     evaluation may remain expensive.
+
+    Identical arguments and derivative requests reuse a bounded result cache,
+    separated by numerical context and precision. Large jets bypass this cache.
 
     **References**
 
