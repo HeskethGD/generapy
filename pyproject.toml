@@ -31,7 +31,7 @@ Issues = "https://github.com/HeskethGD/generapy/issues"
 [project.optional-dependencies]
 test = ["pytest>=8", "pytest-cov>=5"]
 lint = ["ruff>=0.11"]
-docs = ["sphinx>=7", "matplotlib>=3.7", "furo>=2024.8.6"]
+docs = ["sphinx>=7", "matplotlib>=3.7", "furo>=2024.8.6", "myst-parser>=4"]
 build = ["build>=1", "twine>=5"]
 ci = ["diff-cover>=9"]
 develop = [

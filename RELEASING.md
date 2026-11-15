@@ -13,8 +13,13 @@ tags through setuptools-scm; do not edit the generated `_version.py` file.
    Never move a published tag or attempt to replace an existing PyPI version.
 3. Finalize `CHANGELOG.md` with the version, release date, user-visible changes,
    issue/PR links, remaining limitations and any migration instructions.
+   Start the entry with a concise AI-drafted summary, then review it against
+   the actual release diff and resolved issues. Keep deferred proposals out
+   of the list of shipped changes. The root changelog is included directly in
+   the documentation; update that source rather than copying release entries.
 4. Verify documentation and example links, including citations and public APIs.
-   Ensure Read the Docs builds the intended release tag/version.
+   Ensure Read the Docs builds the intended release tag/version and displays
+   the changelog entry in its navigation.
 
 ## Validate distributions locally
 
@@ -59,7 +64,9 @@ Verify the existing configuration before publishing.
    Publishing. It uploads the validated distributions as workflow artifacts.
 4. After publication, install the exact PyPI version in a clean environment,
    verify its version and public APIs, and check the versioned documentation.
-5. Create GitHub release notes for the tag using the reviewed changelog entry.
+5. Create GitHub release notes for the tag using the reviewed changelog summary
+   and a link to its versioned documentation entry. Verify the README changelog
+   link and the release's documentation page after publication.
    Close completed issues only when their acceptance checks are satisfied.
 
 If a published version needs corrections, make a new release with a new tag

@@ -22,6 +22,9 @@ Requires Python 3.11 or later.
 
 **Documentation:** https://generapy.readthedocs.io/en/latest/
 
+See the [changelog](https://generapy.readthedocs.io/en/latest/changelog.html)
+for release summaries and changes, including unreleased development work.
+
 ## Quick Example
 
 For example, verify Baker's genus-two addition formula using Kleinian sigma
@@ -78,6 +81,10 @@ We also welcome corrections to citations, attribution and mathematical
 conventions, including feedback from authors whose work we cite.
 
 ## Examples
+
+The [Baker–Akhiezer example](https://generapy.readthedocs.io/en/latest/examples/baker_akhiezer.html)
+uses the public evaluator on an odd-degree hyperelliptic curve and checks
+the product of its values on opposite sheets.
 
 Literature-based numerical examples live in the repository's `examples/`
 directory. They are not installed as part of the `generapy` package and do

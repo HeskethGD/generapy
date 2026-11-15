@@ -1,3 +1,5 @@
 include docs/_static/generapy-logo.png
 include docs/_static/generapy.css
 include docs_ext/generapy_example.py
+include CHANGELOG.md
+include docs/changelog.rst

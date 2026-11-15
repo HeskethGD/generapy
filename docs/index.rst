@@ -23,3 +23,4 @@ with :doc:`algebraic_curves` and :doc:`abelian`.
    abelian
    examples/index
    references
+   changelog
