@@ -10,6 +10,7 @@ repository's ``examples/`` directory.
    :maxdepth: 2
 
    baker_formula
+   baker_akhiezer
    bernatska
    bobenko
    bobenko_curve_data

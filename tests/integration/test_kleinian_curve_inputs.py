@@ -4,7 +4,7 @@ import pytest
 from mpmath import mp
 
 from generapy import (
-    Curve, kleinian_p, kleinian_sigma, kleinian_sigma_jet,
+    Curve, kleinian_baker_akhiezer, kleinian_p, kleinian_sigma, kleinian_sigma_jet,
     kleinian_sigma_normalization, kleinian_zeta,
 )
 from generapy import kleinian as implementation
@@ -133,14 +133,14 @@ def test_ba_curve_route_matches_integral_route(curve):
     characteristic = curve.riemann_constant().characteristic
     abel = curve.abel_map_kind_1(target).value
     integral = curve.abel_map_kind_2(target).value
-    expected = implementation.kleinian_baker_akhiezer(
+    expected = kleinian_baker_akhiezer(
         [.2], abel, integral, first.omega, first.tau, second.kappa,
         characteristic, ctx=ctx)
-    assert ctx.almosteq(implementation.kleinian_baker_akhiezer(
+    assert ctx.almosteq(kleinian_baker_akhiezer(
         [.2], curve=curve, target=target), expected)
-    assert ctx.almosteq(implementation.kleinian_baker_akhiezer(
+    assert ctx.almosteq(kleinian_baker_akhiezer(
         [.2], curve=POLYNOMIAL, target=target, ctx=ctx), expected)
-    assert ctx.isfinite(implementation.kleinian_baker_akhiezer(
+    assert ctx.isfinite(kleinian_baker_akhiezer(
         [.2], curve=curve, target=target, reduce=True))
 
 
@@ -154,7 +154,7 @@ def test_ba_curve_route_matches_integral_route(curve):
 ])
 def test_ba_curve_contract_errors(kwargs, message):
     with pytest.raises(ValueError, match=message):
-        implementation.kleinian_baker_akhiezer([.2], **kwargs)
+        kleinian_baker_akhiezer([.2], **kwargs)
 
 
 def test_custom_basis_uses_theta_scaling(curve, monkeypatch):
@@ -173,7 +173,7 @@ def test_custom_basis_uses_theta_scaling(curve, monkeypatch):
     with pytest.raises(ValueError, match='automatic hyperelliptic basis'):
         kleinian_sigma([.2], curve=custom, normalization='hyperelliptic')
     with pytest.raises(ValueError, match='odd-degree'):
-        implementation.kleinian_baker_akhiezer([.2], curve=custom, target=(2, 1))
+        kleinian_baker_akhiezer([.2], curve=custom, target=(2, 1))
 
 
 def test_curve_precision_changes_refresh_setup(curve):

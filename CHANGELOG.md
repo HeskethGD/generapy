@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Summary
+
+Generapy now exposes its odd-degree hyperelliptic Baker–Akhiezer evaluator
+through the public API, with a worked numerical example. First- and
+second-kind Abel maps use consistent branch choices, chart continuation
+preserves sheets more reliably, and repeated integrations reuse numerical
+setup. Developer and release instructions have moved into dedicated guides,
+and this changelog is displayed in the documentation.
+
+### Added
+
+- Public `kleinian_baker_akhiezer` evaluator for odd-degree hyperelliptic curves,
+  accepting a `Curve` or sparse polynomial mapping with a spectral target, or
+  compatible explicit integral and period data. Includes a genus-two example
+  checking the product of the functions on opposite sheets.
+
+### Changed
+
+- Refocus the README on installation, usage and feedback, with separate
+  contributor and release guides. Document AI-first development and welcome
+  issue, discussion and citation feedback.
+- Display the repository changelog in the documentation, with release summaries
+  and links from the README.
+
 ### Performance
 
 - Reuse immutable Gauss rules across repeated path and chart integrations,
@@ -22,10 +46,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - First- and second-kind hyperelliptic Abel maps now choose branch anchors at
   a shared routing precision, with deterministic distance ties. This prevents
-  incompatible cycle lifts at equidistant conjugate branches (issue #11),
+  incompatible cycle lifts at equidistant conjugate branches
+  ([#11](https://github.com/HeskethGD/generapy/issues/11)),
   including in the Baker–Akhiezer curve route.
 - Chart continuation now checks local sheet separation and full-step/half-step
-  consistency, preventing the silent branch switch reported in issue #4.
+  consistency, preventing the silent branch switch reported in
+  [#4](https://github.com/HeskethGD/generapy/issues/4).
   Ambiguous quadrature nodes are refined and checked against endpoint branch
   labels. Unresolved continuation raises `NoConvergence`.
 

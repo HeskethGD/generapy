@@ -22,6 +22,9 @@ Requires Python 3.11 or later.
 
 **Documentation:** https://generapy.readthedocs.io/en/latest/
 
+See the [changelog](https://generapy.readthedocs.io/en/latest/changelog.html)
+for release summaries and changes, including unreleased development work.
+
 ## Quick Example
 
 For example, verify Baker's genus-two addition formula using Kleinian sigma
@@ -60,60 +63,35 @@ print(mp.nstr(abs(rhs - lhs), 6))  # 6.31089e-29
 The curve supplies the period data and canonical hyperelliptic sigma
 normalization automatically. See the [example walkthrough](https://generapy.readthedocs.io/en/latest/examples/baker_formula.html)
 for the identity and conventions, or run the
-[complete example](https://github.com/HeskethGD/generapy/blob/v0.1.0/examples/baker_formula/baker_formula_demo.py).
+[complete example](https://github.com/HeskethGD/generapy/blob/main/examples/baker_formula/baker_formula_demo.py).
 
-## Development
+## Contributing
 
-Create an isolated environment and install the development dependencies:
+We pursue AI-first development and encourage the use of capable, high-quality
+AI models. Contributors review their changes and verify the mathematics,
+numerics and sources. Contributions with or without AI assistance are welcome;
+see [CONTRIBUTING.md](CONTRIBUTING.md) for the developer workflow.
 
-```sh
-python -m venv .venv
-.venv/bin/python -m pip install -e '.[develop]'
-```
+## Feedback
 
-Run the local checks with:
-
-```sh
-.venv/bin/ruff check .
-.venv/bin/pytest
-.venv/bin/pytest --cov=generapy --cov-report=term-missing
-.venv/bin/sphinx-build -W -b html docs build/sphinx/html
-.venv/bin/python -m build
-```
-
-Further numerical APIs and documentation will be added incrementally.
-
-### Publishing releases
-
-Publishing is manual through GitHub Actions. Push a release tag, then open
-**Actions → Publish to PyPI → Run workflow**, select `main`, and enter the
-tag (for example, `v0.1.0`). Pushing a commit or tag does not trigger publishing.
-The workflow tests the tagged commit on supported Python versions, builds and
-validates the distributions, checks an installed wheel, and publishes to PyPI.
-
-For the one-time setup, create a GitHub environment named `pypi` and register
-a [PyPI Trusted Publisher](https://docs.pypi.org/trusted-publishers/adding-a-publisher/)
-for owner `HeskethGD`, repository `generapy`, workflow `release.yml`, and
-environment `pypi`. For the first release, register a
-[pending publisher](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)
-for project `generapy` in your PyPI account's Publishing settings. No API token
-is needed. Publish each version once; use a new tag and version for changes
-after publication.
-
-Before the first release, rename the GitHub repository to `generapy` and
-configure a Read the Docs project with the slug `generapy` to match the links
-and publisher configuration above.
-Commit the package rename and move the unpublished `v0.1.0` tag to that commit
-before running the release workflow.
+Report bugs and request enhancements through
+[GitHub issues](https://github.com/HeskethGD/generapy/issues), or share questions,
+ideas and experiences in [GitHub Discussions](https://github.com/HeskethGD/generapy/discussions).
+We also welcome corrections to citations, attribution and mathematical
+conventions, including feedback from authors whose work we cite.
 
 ## Examples
+
+The [Baker–Akhiezer example](https://generapy.readthedocs.io/en/latest/examples/baker_akhiezer.html)
+uses the public evaluator on an odd-degree hyperelliptic curve and checks
+the product of its values on opposite sheets.
 
 Literature-based numerical examples live in the repository's `examples/`
 directory. They are not installed as part of the `generapy` package and do
 not require plotting libraries. Run them from a source checkout, for example:
 
 ```sh
-.venv/bin/python -m examples.manakov.manakov_kleinian_demo
+python -m examples.manakov.manakov_kleinian_demo
 ```
 
 The dynamics examples compare their Abelian-function solutions against a

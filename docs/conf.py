@@ -9,6 +9,7 @@ copyright = "2026, Generapy contributors"
 author = "Generapy contributors"
 
 extensions = [
+    "myst_parser",
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.mathjax",
@@ -17,7 +18,7 @@ extensions = [
     "generapy_example",
 ]
 nitpicky = True
-exclude_patterns = ["_build"]
+exclude_patterns = ["_build", "AGENTS.md"]
 html_theme = "furo"
 html_static_path = ["_static"]
 html_logo = "_static/generapy-logo.png"

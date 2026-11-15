@@ -4,7 +4,7 @@ import pytest
 from mpmath import mp
 
 from generapy import Curve, kleinian_sigma_jet
-from generapy.kleinian import kleinian_baker_akhiezer
+from generapy import kleinian_baker_akhiezer
 from generapy.curves._hyperelliptic.model import _admissible_branch_vertex
 
 

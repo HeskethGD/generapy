@@ -5,7 +5,7 @@ from generapy import (
     kleinian_p, kleinian_sigma,
     kleinian_sigma_jet, kleinian_zeta,
 )
-from generapy.kleinian import kleinian_baker_akhiezer
+from generapy import kleinian_baker_akhiezer
 from mpmath import diff, log, mp
 
 
