@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Summary
 
-Generapy now exposes a public Baker–Akhiezer evaluator with hyperelliptic
-spectral and reference normalizations, with a worked numerical example. First- and
-second-kind Abel maps use consistent branch choices, chart continuation
-preserves sheets more reliably, and repeated integrations reuse numerical
+Generapy now exposes Baker–Akhiezer values and ordinary directional derivatives
+with hyperelliptic spectral and reference normalizations, with worked numerical
+examples. First- and second-kind Abel maps use consistent branch choices,
+chart continuation preserves sheets more reliably, and repeated integrations reuse numerical
 setup. Developer and release instructions have moved into dedicated guides,
 and this changelog is displayed in the documentation.
 
@@ -22,6 +22,9 @@ and this changelog is displayed in the documentation.
   with a spectral `point`, or compatible explicit `shift`, second-kind and
   period data. Reference normalization also accepts supplied custom-basis
   curve data. Includes a genus-two sheet-product example.
+- `baker_akhiezer_jet` returns zero-safe ordinary directional derivatives for
+  both BA normalizations, including dense Abel directions. A reference example
+  checks finite derivatives at a numerator zero.
 
 ### Changed
 

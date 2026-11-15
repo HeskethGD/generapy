@@ -19,7 +19,7 @@ benchmarks/
 ## Prerequisites
 
 To measure the evaluated theta-result cache on repeated and moving arguments,
-and sigma jets sharing a denominator across four shifts, run:
+and sigma/BA jets sharing a denominator across four shifts, run:
 
 ```sh
 python -m benchmarks.rtheta.benchmark_evaluation_cache

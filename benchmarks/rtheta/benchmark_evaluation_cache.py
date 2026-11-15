@@ -14,7 +14,7 @@ import subprocess
 from time import perf_counter
 
 import generapy
-from generapy import kleinian_sigma_jet, rtheta_jet
+from generapy import baker_akhiezer_jet, kleinian_sigma_jet, rtheta_jet
 from mpmath import mp
 
 
@@ -53,10 +53,24 @@ def main():
                                 point, omega, tau, kappa, 3, ctx=ctx).values())
                 return tuple(output)
 
+            def ba_workload():
+                output = []
+                for sample in range(args.samples):
+                    z = tuple(v + ctx.mpf(sample)/100 for v in u)
+                    for mode in range(4):
+                        output.extend(baker_akhiezer_jet(
+                            z, shift=[ctx.mpf(mode+1)/20]*genus,
+                            second_kind=[ctx.mpf('.1')]*genus,
+                            omega=omega, tau=tau, kappa=kappa,
+                            normalization='reference', reference=[ctx.mpf('.07')]*genus,
+                            direction=[1]*genus, order=3, ctx=ctx))
+                return tuple(output)
+
             for name, workload in (
                 ('identical theta jets', lambda: theta_workload(False)),
                 ('moving theta jets', lambda: theta_workload(True)),
                 ('four shifts sharing sigma denominator', sigma_workload),
+                ('reference BA jets, four shifts', ba_workload),
             ):
                 # Populate point-independent setup before either timing.
                 reference = workload()

@@ -521,6 +521,70 @@ def baker_akhiezer(u, shift=None, second_kind=None, omega=None,
     literally and makes no assumption about sigma parity or a dual BA function.
     ``ctx`` follows the same conventions as :func:`kleinian_sigma`.
     """
+    return _baker_akhiezer_evaluate(
+        u, shift, second_kind, omega, tau, kappa, characteristic,
+        direction=None, order=0, curve=curve, point=point, reduce=reduce,
+        normalization=normalization, reference=reference, ctx=ctx)[0]
+
+
+def baker_akhiezer_jet(u, shift=None, second_kind=None, omega=None,
+                        tau=None, kappa=None, characteristic=None, *,
+                        direction, order, curve=None, point=None, reduce=False,
+                        normalization="spectral", reference=None, ctx=None):
+    r"""Return ordinary directional BA derivatives through ``order``.
+
+    The returned tuple contains the derivatives at t=0 of B(u+t*direction),
+    including the value at index zero. Entries are ordinary derivatives,
+    not Taylor coefficients. The reference argument is held fixed.
+    ``direction`` is a vector in the same Abelian coordinates as ``u``.
+    ``order`` is a nonnegative integer.
+
+    Both normalizations and all data routes follow :func:`baker_akhiezer`.
+    Sigma jets are contracted along the supplied direction, and the quotient
+    is differentiated directly without dividing by its numerator. Numerator
+    zeros therefore allow finite ordinary derivatives; denominator and
+    reference normalizers must remain nonzero. The same conditioning limits
+    as the scalar evaluator apply. Repeated identical theta requests reuse
+    the bounded evaluation cache automatically.
+
+    **Example**::
+
+        >>> from generapy import Curve, baker_akhiezer_jet
+        >>> from mpmath import mp
+        >>> curve = Curve({(0, 2): 1, (3, 0): -4, (1, 0): 4})
+        >>> jet = baker_akhiezer_jet([.3], curve=curve, point=(2, mp.sqrt(24)),
+        ...                          direction=[1], order=3)
+        >>> len(jet)
+        4
+    """
+    if direction is None:
+        raise ValueError("direction must be a vector")
+    return _baker_akhiezer_evaluate(
+        u, shift, second_kind, omega, tau, kappa, characteristic,
+        direction=direction, order=order, curve=curve, point=point, reduce=reduce,
+        normalization=normalization, reference=reference, ctx=ctx)
+
+
+def _sigma_directional_jet(ctx, argument, direction, order, omega, tau,
+                            kappa, characteristic, normalization):
+    """Contract ordinary mixed sigma derivatives into one flow direction."""
+    jet = kleinian_sigma_jet(argument, omega, tau, kappa, order, characteristic,
+                              normalization=normalization, ctx=ctx)
+    result = []
+    for n in range(order+1):
+        result.append(ctx.fsum(
+            (math.factorial(n) // math.prod(math.factorial(k) for k in index))
+            * ctx.fprod(d**k for d, k in zip(direction, index)) * value
+            for index, value in jet.items() if sum(index) == n))
+    return tuple(result)
+
+
+def _baker_akhiezer_evaluate(u, shift, second_kind, omega, tau, kappa,
+                             characteristic, *, direction, order, curve, point,
+                             reduce, normalization, reference, ctx):
+    """Share the scalar and ordinary-jet implementation."""
+    if not isinstance(order, int) or isinstance(order, bool) or order < 0:
+        raise ValueError("order must be a nonnegative integer")
     ctx, omega, tau, kappa, characteristic, shift, second_kind = _baker_akhiezer_inputs(
         shift, second_kind, omega, tau, kappa, characteristic, curve, point,
         reduce, normalization, reference, ctx)
@@ -530,6 +594,8 @@ def baker_akhiezer(u, shift=None, second_kind=None, omega=None,
         u = _as_vector(ctx, u, "u", genus)
         shift = _as_vector(ctx, shift, "shift", genus)
         second_kind = _as_vector(ctx, second_kind, "second_kind", genus)
+        direction = ((ctx.zero,) * genus if direction is None else
+                     _as_vector(ctx, direction, "direction", genus))
         characteristic = _normalise_characteristic(ctx, characteristic, genus)
         sigma_normalization = "hyperelliptic" if normalization == "spectral" else "theta"
 
@@ -537,9 +603,12 @@ def baker_akhiezer(u, shift=None, second_kind=None, omega=None,
             return kleinian_sigma(argument, omega, tau, kappa, characteristic,
                                   normalization=sigma_normalization, ctx=ctx)
 
-        numerator = sigma(tuple(a-v for a, v in zip(shift, u)))
-        denominator = sigma(u)
-        _require_baker_normalizer(ctx, denominator, u, characteristic, "denominator",
+        numerator = _sigma_directional_jet(
+            ctx, tuple(a-v for a, v in zip(shift, u)), tuple(-d for d in direction),
+            order, omega, tau, kappa, characteristic, sigma_normalization)
+        denominator = _sigma_directional_jet(
+            ctx, u, direction, order, omega, tau, kappa, characteristic, sigma_normalization)
+        _require_baker_normalizer(ctx, denominator[0], u, characteristic, "denominator",
                                   curve is not None or normalization == "spectral")
         if normalization == "spectral":
             sharp = _kleinian_sigma_sharp(ctx, shift, omega, tau, kappa, characteristic)
@@ -556,9 +625,20 @@ def baker_akhiezer(u, shift=None, second_kind=None, omega=None,
                                       "reference numerator", curve is not None)
             factor = reference_sigma/reference_numerator
             delta = tuple(v-r for v, r in zip(u, reference))
-        exponent = -ctx.fsum(r*v for r, v in zip(second_kind, delta))
-        result = factor * ctx.exp(exponent) * numerator/denominator
-    return +result
+        exponential = ctx.exp(-ctx.fsum(r*v for r, v in zip(second_kind, delta)))
+        rate = -ctx.fsum(r*d for r, d in zip(second_kind, direction))
+        exponential_numerator = tuple(exponential * ctx.fsum(
+            math.comb(n, k) * rate**(n-k) * numerator[k] for k in range(n+1))
+            for n in range(order+1))
+        # N = D Q gives a recurrence dividing only by D[0]. It remains
+        # defined at numerator zeros where logarithmic differentiation fails.
+        quotient = []
+        for n in range(order+1):
+            quotient.append((exponential_numerator[n] - ctx.fsum(
+                math.comb(n, j)*denominator[j]*quotient[n-j]
+                for j in range(1, n+1))) / denominator[0])
+        result = tuple(factor*value for value in quotient)
+    return tuple(+value for value in result)
 
 
 def kleinian_sigma_jet(u, omega=None, tau=None, kappa=None, order=None,

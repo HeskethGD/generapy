@@ -217,10 +217,34 @@ characteristic; replacing it by :math:`u-A` requires an appropriate parity
 identity. Opposite signs of the shift and second-kind vector do not by
 themselves certify a divisor-theoretic dual BA function.
 
+Ordinary directional derivatives
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``baker_akhiezer_jet`` accepts the same data and normalization choices. Supply
+``direction=d`` and ``order=n`` to obtain a tuple of ordinary derivatives of
+:math:`B(u+td)` at :math:`t=0`, starting with its value. The reference vector
+is held fixed. Both coordinate directions and dense Abel directions are
+accepted. For example::
+
+   from generapy import baker_akhiezer_jet
+
+   jet = baker_akhiezer_jet([mp.mpf('0.3')], curve=curve,
+                           point=(2, mp.sqrt(24)), direction=[1], order=3,
+                           normalization="reference", reference=[mp.mpf('0.2')])
+
+The entries are derivatives, not factorial-scaled Taylor coefficients.
+Ordinary quotient differentiation avoids division by a vanishing numerator.
+The :doc:`reference BA example <examples/reference_ba>` checks a finite first
+derivative at an exact numerator zero. Identical evaluated theta requests are
+reused by a bounded cache, separated by context, precision, characteristic and
+derivative request; callers do not need to manage shared denominator state.
+
 The :doc:`genus-two BA example <examples/baker_akhiezer>` checks the product
 on opposite sheets against the Bolza polynomial [BEH2005]_.
 
 .. autofunction:: generapy.baker_akhiezer
+
+.. autofunction:: generapy.baker_akhiezer_jet
 
 For the classical development of Abelian, theta, sigma, and multiply periodic
 functions, see [Baker1907]_, [BEL1997]_, [CEEK2000]_, [Onishi2005]_,
