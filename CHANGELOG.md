@@ -8,8 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Summary
 
-Generapy now exposes its odd-degree hyperelliptic Baker–Akhiezer evaluator
-through the public API, with a worked numerical example. First- and
+Generapy now exposes a public Baker–Akhiezer evaluator with hyperelliptic
+spectral and reference normalizations, with a worked numerical example. First- and
 second-kind Abel maps use consistent branch choices, chart continuation
 preserves sheets more reliably, and repeated integrations reuse numerical
 setup. Developer and release instructions have moved into dedicated guides,
@@ -17,10 +17,11 @@ and this changelog is displayed in the documentation.
 
 ### Added
 
-- Public `baker_akhiezer` evaluator for odd-degree hyperelliptic curves,
-  accepting a `Curve` or sparse polynomial mapping with a spectral point, or
-  compatible explicit integral and period data. Includes a genus-two example
-  checking the product of the functions on opposite sheets.
+- Public `baker_akhiezer` evaluator with hyperelliptic spectral normalization
+  and reference normalization. Accepts a `Curve` or sparse polynomial mapping
+  with a spectral `point`, or compatible explicit `shift`, second-kind and
+  period data. Reference normalization also accepts supplied custom-basis
+  curve data. Includes a genus-two sheet-product example.
 
 ### Changed
 

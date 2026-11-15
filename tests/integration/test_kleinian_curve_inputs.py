@@ -142,13 +142,22 @@ def test_ba_curve_route_matches_integral_route(curve):
         [.2], curve=POLYNOMIAL, point=target, ctx=ctx), expected)
     assert ctx.isfinite(baker_akhiezer(
         [.2], curve=curve, point=target, reduce=True))
+    reference = [ctx.mpf('.13')]
+    expected_reference = expected/baker_akhiezer(
+        reference, abel, integral, first.omega, first.tau, second.kappa,
+        characteristic, ctx=ctx)
+    for kwargs in ({'curve': curve, 'point': target},
+                   {'curve': curve, 'shift': abel, 'second_kind': integral},
+                   {'curve': POLYNOMIAL, 'point': target, 'ctx': ctx}):
+        assert ctx.almosteq(baker_akhiezer(
+            [.2], **kwargs, normalization='reference', reference=reference), expected_reference)
 
 
 @pytest.mark.parametrize('kwargs, message', [
-    ({'curve': POLYNOMIAL}, 'requires point'),
-    ({'curve': POLYNOMIAL, 'point': 2, 'shift': [1]}, 'requires point'),
+    ({'curve': POLYNOMIAL}, 'supply curve and point'),
+    ({'curve': POLYNOMIAL, 'point': 2, 'shift': [1]}, 'cannot be combined'),
     ({'point': 2}, 'require curve'),
-    ({'reduce': True}, 'require curve'),
+    ({'reduce': True}, 'requires curve and point'),
     ({'curve': {(0, 3): 1, (4, 0): -1, (0, 0): 1}, 'point': 2}, 'odd-degree'),
     ({'curve': {(0, 2): 1, (4, 0): -1, (0, 0): 1}, 'point': 2}, 'odd-degree'),
 ])
@@ -174,6 +183,12 @@ def test_custom_basis_uses_theta_scaling(curve, monkeypatch):
         kleinian_sigma([.2], curve=custom, normalization='hyperelliptic')
     with pytest.raises(ValueError, match='odd-degree'):
         baker_akhiezer([.2], curve=custom, point=(2, 1))
+    kwargs = dict(shift=[.3], second_kind=[.1], reference=[.15], normalization='reference')
+    assert curve.ctx.almosteq(
+        baker_akhiezer([.2], curve=custom, **kwargs),
+        baker_akhiezer([.2], [.3], [.1],
+                      first.omega, first.tau, second.kappa, constant.characteristic,
+                      reference=[.15], normalization='reference', ctx=curve.ctx))
 
 
 def test_curve_precision_changes_refresh_setup(curve):
