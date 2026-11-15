@@ -20,6 +20,36 @@ The numerical package lives in `src/generapy/`, tests in `tests/`, runnable
 literature examples in `examples/`, and Sphinx documentation in `docs/`.
 Read any `AGENTS.md` instructions in the directories you change.
 
+## AI-first development
+
+Generapy pursues AI-first development. We encourage contributors to use
+capable, high-quality AI models for research, implementation, testing and
+documentation. Contributions with or without AI assistance are welcome.
+
+Contributors remain responsible for understanding and reviewing their changes,
+verifying mathematical claims and citations against primary sources, and
+demonstrating numerical correctness with independent checks. An AI-generated
+explanation or a passing test that repeats the implementation is not sufficient
+evidence for a mathematical claim.
+
+## Feedback and citation corrections
+
+Use [GitHub issues](https://github.com/HeskethGD/generapy/issues) for bugs,
+enhancement requests and concrete corrections, and
+[GitHub Discussions](https://github.com/HeskethGD/generapy/discussions) for
+questions, ideas and experiences using the package. Feedback is welcome
+without a code contribution.
+
+For numerical bug reports, include the Generapy, Python and mpmath versions,
+working precision and numerical context, curve and differential basis,
+normalization and path/lift choices, and a minimal reproducer with expected
+and actual results.
+
+We welcome citation and attribution edits, including feedback from authors
+whose work appears in the documentation. Explain the correction and provide
+a primary-source link and page, equation or theorem number where possible.
+These can be reported as issues or submitted directly as documentation PRs.
+
 ## Checking a change
 
 Run the checks relevant to your change while developing. For example:

@@ -64,8 +64,18 @@ for the identity and conventions, or run the
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
-developer setup, checks and contribution workflow.
+We pursue AI-first development and encourage the use of capable, high-quality
+AI models. Contributors review their changes and verify the mathematics,
+numerics and sources. Contributions with or without AI assistance are welcome;
+see [CONTRIBUTING.md](CONTRIBUTING.md) for the developer workflow.
+
+## Feedback
+
+Report bugs and request enhancements through
+[GitHub issues](https://github.com/HeskethGD/generapy/issues), or share questions,
+ideas and experiences in [GitHub Discussions](https://github.com/HeskethGD/generapy/discussions).
+We also welcome corrections to citations, attribution and mathematical
+conventions, including feedback from authors whose work we cite.
 
 ## Examples
 
