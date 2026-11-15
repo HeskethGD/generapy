@@ -5,7 +5,7 @@ from generapy import (
     kleinian_p, kleinian_sigma,
     kleinian_sigma_jet, kleinian_zeta,
 )
-from generapy import kleinian_baker_akhiezer
+from generapy import baker_akhiezer
 from mpmath import diff, log, mp
 
 
@@ -157,7 +157,7 @@ def test_kleinian_sigma_jet_genus_one_and_normalization():
             jet[(order,)], diff(sigma, u, order))
 
 
-def test_kleinian_baker_akhiezer_genus_one_definition():
+def test_baker_akhiezer_genus_one_definition():
     ctx = mp.clone()
     ctx.dps = 35
     omega = [[ctx.mpf("0.7")]]
@@ -174,7 +174,7 @@ def test_kleinian_baker_akhiezer_genus_one_definition():
     expected = (sigma([abel[0] - u[0]]) * ctx.exp(-second_kind[0] * u[0])
                 / (sigma(abel) * sigma(u)))
     assert ctx.almosteq(
-        kleinian_baker_akhiezer(
+        baker_akhiezer(
             u, abel, second_kind, omega, tau, kappa, characteristic,
             ctx=ctx),
         expected,

@@ -26,7 +26,7 @@ indices are zero-based.
 Passing the same ``Curve`` to both BA calls supplies the periods,
 characteristic, canonical sigma scale and compatible first-/second-kind
 integrals. The exponent uses the BEL sign convention described in
-:func:`generapy.kleinian_baker_akhiezer`. Both sheet calls use unreduced
+:func:`generapy.baker_akhiezer`. Both sheet calls use unreduced
 infinity-based lifts.
 
 .. literalinclude:: ../../examples/baker_akhiezer/baker_akhiezer_demo.py

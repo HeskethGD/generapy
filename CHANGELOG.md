@@ -17,8 +17,8 @@ and this changelog is displayed in the documentation.
 
 ### Added
 
-- Public `kleinian_baker_akhiezer` evaluator for odd-degree hyperelliptic curves,
-  accepting a `Curve` or sparse polynomial mapping with a spectral target, or
+- Public `baker_akhiezer` evaluator for odd-degree hyperelliptic curves,
+  accepting a `Curve` or sparse polynomial mapping with a spectral point, or
   compatible explicit integral and period data. Includes a genus-two example
   checking the product of the functions on opposite sheets.
 

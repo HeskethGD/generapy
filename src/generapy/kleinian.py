@@ -427,11 +427,11 @@ def kleinian_sigma(u, omega=None, tau=None, kappa=None, characteristic=None,
     return +result
 
 
-def kleinian_baker_akhiezer(u, abel=None, second_kind=None, omega=None,
+def baker_akhiezer(u, shift=None, second_kind=None, omega=None,
                              tau=None, kappa=None, characteristic=None, *,
-                             curve=None, target=None, reduce=False, ctx=None):
+                             curve=None, point=None, reduce=False, ctx=None):
     r"""
-    Evaluate the normalized odd-degree Kleinian Baker--Akhiezer function.
+    Evaluate the spectrally normalized hyperelliptic Baker--Akhiezer function.
 
     Given compatible first- and second-kind integral vectors
     :math:`A(P)` and :math:`R(P)`, this evaluates
@@ -453,22 +453,22 @@ def kleinian_baker_akhiezer(u, abel=None, second_kind=None, omega=None,
     the unique point at infinity. See [Onishi2005]_, Definition 6.1 and
     Proposition 6.6, and [BEH2005]_, equation (3.3).
 
-    Alternatively, ``curve`` and ``target`` derive both integrals and the
+    Alternatively, ``curve`` and ``point`` derive both integrals and the
     period data together. This route requires the automatic odd-degree
     hyperelliptic basis, with infinity as the base point. ``reduce`` applies
     the same lattice reduction to both Abel maps. Explicit integral vectors
     and period data cannot be combined with this route.
 
-    ``abel`` and ``second_kind`` should normally be obtained from
+    ``shift`` and ``second_kind`` should normally be obtained from
     the ``value`` fields returned by ``Curve.abel_map_kind_1`` and
     ``Curve.abel_map_kind_2``, using the same
-    target and reduction choice. The
+    point and reduction choice. The
     remaining inputs use the same conventions as
     :func:`~generapy.kleinian_sigma`. Sigma is evaluated with its canonical
     ``normalization="hyperelliptic"``; this is required because its
     multiplicative constant does not cancel from the normalized expression.
     The denominator is singular when ``u`` lies on the sigma divisor or
-    ``sigma_sharp(abel)`` vanishes. Use one finite spectral point ``target``
+    ``sigma_sharp(shift)`` vanishes. Use one finite spectral point ``point``
     with a nonzero sharp normalizer. The explicit-data route requires the
     same odd-degree hyperelliptic basis, characteristic and infinity-based
     lift; arbitrary period data do not define this spectral normalization.
@@ -483,8 +483,8 @@ def kleinian_baker_akhiezer(u, abel=None, second_kind=None, omega=None,
 
     """
     if curve is not None:
-        if target is None or abel is not None or second_kind is not None:
-            raise ValueError("the BA curve route requires target instead of integral vectors")
+        if point is None or shift is not None or second_kind is not None:
+            raise ValueError("the BA curve route requires point instead of integral vectors")
         if not isinstance(curve, Curve):
             curve = Curve(curve, ctx=ctx)
         model = curve._hyperelliptic_model
@@ -492,19 +492,19 @@ def kleinian_baker_akhiezer(u, abel=None, second_kind=None, omega=None,
             raise ValueError("the BA curve route requires an automatic odd-degree hyperelliptic curve")
         ctx, omega, tau, kappa, characteristic, _ = _resolve_kleinian_inputs(
             omega, tau, kappa, characteristic, curve, ctx)
-        abel = curve.abel_map_kind_1(target, reduce=reduce).value
-        second_kind = curve.abel_map_kind_2(target, reduce=reduce).value
-    elif target is not None or reduce:
-        raise ValueError("target and reduce require curve")
+        shift = curve.abel_map_kind_1(point, reduce=reduce).value
+        second_kind = curve.abel_map_kind_2(point, reduce=reduce).value
+    elif point is not None or reduce:
+        raise ValueError("point and reduce require curve")
     ctx = resolve_context(ctx)
     with ctx.extraprec(10):
         omega_matrix = _normalise_kleinian_matrix(ctx, omega, "omega")
         genus = omega_matrix.rows
         u = _as_vector(ctx, u, "u", genus)
-        abel = _as_vector(ctx, abel, "abel", genus)
+        shift = _as_vector(ctx, shift, "shift", genus)
         second_kind = _as_vector(
             ctx, second_kind, "second_kind", genus)
-        shifted = tuple(abel[index] - u[index]
+        shifted = tuple(shift[index] - u[index]
                         for index in range(genus))
         numerator = kleinian_sigma(
             shifted, omega_matrix, tau, kappa, characteristic,
@@ -513,7 +513,7 @@ def kleinian_baker_akhiezer(u, abel=None, second_kind=None, omega=None,
             u, omega_matrix, tau, kappa, characteristic,
             normalization="hyperelliptic", ctx=ctx)
         spectral_normalization = _kleinian_sigma_sharp(
-            ctx, abel, omega_matrix, tau, kappa, characteristic)
+            ctx, shift, omega_matrix, tau, kappa, characteristic)
         exponent = -ctx.fsum(
             second_kind[index] * u[index] for index in range(genus))
         result = (numerator * ctx.exp(exponent)

@@ -4,7 +4,7 @@ import pytest
 from mpmath import mp
 
 from generapy import Curve, kleinian_sigma_jet
-from generapy import kleinian_baker_akhiezer
+from generapy import baker_akhiezer
 from generapy.curves._hyperelliptic.model import _admissible_branch_vertex
 
 
@@ -63,11 +63,11 @@ def test_ba_curve_route_uses_sigma_compatible_exponent(curve):
     characteristic = curve.riemann_constant().characteristic
     for reduce in (False, True):
         abel = curve.abel_map_kind_1(target, reduce=reduce).value
-        expected = kleinian_baker_akhiezer(
+        expected = baker_akhiezer(
             u, abel, sigma_second_kind(curve, abel), first.omega, first.tau,
             second.kappa, characteristic, ctx=ctx)
-        actual = kleinian_baker_akhiezer(
-            u, curve=curve, target=target, reduce=reduce)
+        actual = baker_akhiezer(
+            u, curve=curve, point=target, reduce=reduce)
         assert abs(actual - expected) / max(1, abs(expected)) < ctx.mpf(10)**(8 - ctx.dps)
 
 

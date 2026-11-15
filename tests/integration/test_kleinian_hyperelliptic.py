@@ -5,7 +5,7 @@ from generapy import (
     Curve, kleinian_p, kleinian_sigma,
     kleinian_sigma_jet, kleinian_zeta,
 )
-from generapy import kleinian_baker_akhiezer
+from generapy import baker_akhiezer
 from mpmath import mp
 
 
@@ -132,7 +132,7 @@ def test_hyperelliptic_abel_map_second_kind_genus_one():
         coefficients, (), second_kind=True)
     assert mp.norm(image) == mp.norm(second) == 0
 
-def test_kleinian_baker_akhiezer_genus_one_schrodinger():
+def test_baker_akhiezer_genus_one_schrodinger():
     # The genus-one specialization of CEEK (2000), equations (3.21)-(3.22),
     # is the classical one-gap Lame equation. The factor depending only on
     # the spectral point cancels from this differential equation.
@@ -145,7 +145,7 @@ def test_kleinian_baker_akhiezer_genus_one_schrodinger():
         coefficients, (x, y), second_kind=True)
 
     def baker(argument):
-        return kleinian_baker_akhiezer(
+        return baker_akhiezer(
             [argument], abel, second, omega, tau, kappa, characteristic)
 
     u = mp.mpf('0.3')
@@ -155,7 +155,7 @@ def test_kleinian_baker_akhiezer_genus_one_schrodinger():
     eigenvalue = (mp.diff(baker, u, 2) - 2 * potential * value) / value
     assert mp.almosteq(eigenvalue, x)
 
-def test_kleinian_baker_akhiezer_genus_two_schrodinger():
+def test_baker_akhiezer_genus_two_schrodinger():
     # CEEK (2000), equation (3.22), states
     # (d_2**2-2*wp_22) Psi = (lambda+alpha_4/4) Psi. Here alpha_4=0.
     # This tests the sigma quotient, the finite-part second-kind vector and
@@ -172,7 +172,7 @@ def test_kleinian_baker_akhiezer_genus_two_schrodinger():
     u1 = mp.mpf('0.13')
 
     def baker(u2):
-        return kleinian_baker_akhiezer(
+        return baker_akhiezer(
             [u1, u2], abel, second, omega, tau, kappa, characteristic)
 
     u2 = mp.mpf('0.27')
@@ -182,7 +182,7 @@ def test_kleinian_baker_akhiezer_genus_two_schrodinger():
     eigenvalue = (mp.diff(baker, u2, 2) - 2 * potential * value) / value
     assert abs(eigenvalue - x) < mp.mpf('1e-27')
 
-def test_kleinian_baker_akhiezer_genus_two_product():
+def test_baker_akhiezer_genus_two_product():
     # Braden, Enolskii & Hone (2005), equations (3.3) and (3.8), normalize
     # the two sheet-related Baker functions by sigma_2(A(P)) and give their
     # product as the genus-two Bolza polynomial.
@@ -198,7 +198,7 @@ def test_kleinian_baker_akhiezer_genus_two_product():
     for ordinate in (y, -y):
         abel, second = hyperelliptic_abel_map(
             coefficients, (x, ordinate), second_kind=True)
-        values.append(kleinian_baker_akhiezer(
+        values.append(baker_akhiezer(
             u, abel, second, omega, tau, kappa, characteristic))
     wp_22, wp_12 = kleinian_p(
         u, omega, tau, kappa, [(1, 1), (0, 1)], characteristic)
@@ -320,15 +320,15 @@ def test_onishi_kiepert_genus_two():
     assert abs(sigma_side - determinant_side) < (
         mp.mpf('1e-25') * abs(determinant_side))
 
-def test_kleinian_baker_akhiezer_vector_validation():
+def test_baker_akhiezer_vector_validation():
     omega = [[1]]
     tau = [[1j]]
     kappa = [[0]]
-    with pytest.raises(ValueError, match="abel must have length 1"):
-        kleinian_baker_akhiezer([0.2], [0.1, 0.2], [0.3],
+    with pytest.raises(ValueError, match="shift must have length 1"):
+        baker_akhiezer([0.2], [0.1, 0.2], [0.3],
                                 omega, tau, kappa)
     with pytest.raises(ValueError, match="second_kind must have length 1"):
-        kleinian_baker_akhiezer([0.2], [0.1], [0.2, 0.3],
+        baker_akhiezer([0.2], [0.1], [0.2, 0.3],
                                 omega, tau, kappa)
 
 def test_hyperelliptic_abel_map_genus_two_jacobi_inversion():

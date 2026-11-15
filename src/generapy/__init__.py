@@ -7,7 +7,7 @@ from .curves import (
     CurveAbelMapKind1, CurveAbelMapKind2, CurvePeriodsKind2, CurveValidation,
 )
 from .kleinian import (
-    kleinian_baker_akhiezer, kleinian_p, kleinian_sigma, kleinian_sigma_jet,
+    baker_akhiezer, kleinian_p, kleinian_sigma, kleinian_sigma_jet,
     kleinian_sigma_normalization, kleinian_zeta,
 )
 from .riemann_theta import rtheta, rtheta_jet
@@ -22,7 +22,7 @@ __all__ = [
     "CurvePeriodsKind1", "CurveGenus", "CurveHomology", "CurveIntegral",
     "CurveLatticeReduction", "CurveMonodromy", "CurvePath", "CurvePlace",
     "CurveRiemannConstant", "CurveAbelMapKind1", "CurveAbelMapKind2", "CurvePeriodsKind2",
-    "CurveValidation", "kleinian_baker_akhiezer", "kleinian_p", "kleinian_sigma",
+    "CurveValidation", "baker_akhiezer", "kleinian_p", "kleinian_sigma",
     "kleinian_sigma_jet", "kleinian_sigma_normalization", "kleinian_zeta",
     "rtheta", "rtheta_jet",
 ]

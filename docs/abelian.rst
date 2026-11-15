@@ -160,17 +160,17 @@ derivatives where sigma itself vanishes. The
 Baker–Akhiezer functions
 ........................
 
-``kleinian_baker_akhiezer`` evaluates the spectrally normalized one-point
+``baker_akhiezer`` evaluates the spectrally normalized one-point
 Baker–Akhiezer function for odd-degree hyperelliptic curves. Its argument
-``u`` is a free Jacobian vector; the separate ``target`` is a finite point
+``u`` is a free Jacobian vector; the separate ``point`` is a finite point
 on the curve. For example::
 
-   from generapy import Curve, kleinian_baker_akhiezer
+   from generapy import Curve, baker_akhiezer
    from mpmath import mp
 
    curve = Curve({(0, 2): 1, (3, 0): -4, (1, 0): 4})
-   value = kleinian_baker_akhiezer([mp.mpf('0.3')],
-                                  curve=curve, target=(2, mp.sqrt(24)))
+   value = baker_akhiezer([mp.mpf('0.3')],
+                                  curve=curve, point=(2, mp.sqrt(24)))
 
 The automatic curve route supplies compatible first- and second-kind Abel
 integrals from the unique point at infinity, the period data and the
@@ -187,7 +187,7 @@ does not cancel.
 The :doc:`genus-two BA example <examples/baker_akhiezer>` checks the product
 on opposite sheets against the Bolza polynomial [BEH2005]_.
 
-.. autofunction:: generapy.kleinian_baker_akhiezer
+.. autofunction:: generapy.baker_akhiezer
 
 For the classical development of Abelian, theta, sigma, and multiply periodic
 functions, see [Baker1907]_, [BEL1997]_, [CEEK2000]_, [Onishi2005]_,
