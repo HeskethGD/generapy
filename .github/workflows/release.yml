@@ -139,6 +139,10 @@ jobs:
           assert mp.almosteq(periods.tau[0, 0], mp.j)
           assert mp.almosteq(
               generapy.rtheta([0], [[mp.j]]), mp.jtheta(3, 0, mp.exp(-mp.pi)))
+          target = (mp.mpf(2), mp.sqrt(6))
+          value = generapy.kleinian_baker_akhiezer(
+              [mp.mpf('0.3')], curve=curve, target=target)
+          assert mp.isfinite(value)
           print("Installed-wheel smoke checks passed.")
           PY
       - uses: actions/upload-artifact@v7

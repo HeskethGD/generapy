@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Public `kleinian_baker_akhiezer` evaluator for odd-degree hyperelliptic curves,
+  accepting a `Curve` or sparse polynomial mapping with a spectral target, or
+  compatible explicit integral and period data. Includes a genus-two example
+  checking the product of the functions on opposite sheets.
+
 ### Performance
 
 - Reuse immutable Gauss rules across repeated path and chart integrations,

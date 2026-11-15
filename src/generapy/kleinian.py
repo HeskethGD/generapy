@@ -460,14 +460,18 @@ def kleinian_baker_akhiezer(u, abel=None, second_kind=None, omega=None,
     and period data cannot be combined with this route.
 
     ``abel`` and ``second_kind`` should normally be obtained from
-    ``Curve.abel_map_kind_1`` and the ``value`` field returned by
+    the ``value`` fields returned by ``Curve.abel_map_kind_1`` and
     ``Curve.abel_map_kind_2``, using the same
     target and reduction choice. The
     remaining inputs use the same conventions as
     :func:`~generapy.kleinian_sigma`. Sigma is evaluated with its canonical
     ``normalization="hyperelliptic"``; this is required because its
     multiplicative constant does not cancel from the normalized expression.
-    The denominator is singular when ``u`` lies on the sigma divisor.
+    The denominator is singular when ``u`` lies on the sigma divisor or
+    ``sigma_sharp(abel)`` vanishes. Use one finite spectral point ``target``
+    with a nonzero sharp normalizer. The explicit-data route requires the
+    same odd-degree hyperelliptic basis, characteristic and infinity-based
+    lift; arbitrary period data do not define this spectral normalization.
 
     The sign in the exponential converts the positive second-kind periods of
     Christiansen, Eilbeck, Enolskii and Kostov to the classical BEL convention
@@ -476,8 +480,7 @@ def kleinian_baker_akhiezer(u, abel=None, second_kind=None, omega=None,
 
     For an odd-degree hyperelliptic curve, the automatic specialized path in
     ``Curve.abel_map_kind_2`` uses the unique point
-    at infinity
-    required by this standard spectral interpretation. Its even-degree base
+    at infinity required by this standard spectral interpretation. Its even-degree base
     point is instead finite; constructing a BA function with an essential
     singularity at either of the two even-degree points at infinity requires
     an additional marked-infinity convention.
