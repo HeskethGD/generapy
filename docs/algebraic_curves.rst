@@ -159,12 +159,20 @@ computed without supplying differential callables::
 through ``differentials_kind_2``. Without them, these methods raise an error.
 First-kind calculations do not require them.
 
-Resolved differential bases
-"""""""""""""""""""""""""""
+Resolved differential bases (advanced)
+""""""""""""""""""""""""""""""""""""""
 
-The resolved-basis methods return callables and metadata for the forms used
-by period and Abel calculations. Use them to integrate the automatic basis
-on a chosen finite path::
+**Use the Abel-map methods when you want standard Abel coordinates**,
+particularly for combining results with periods, sigma functions or the BA
+curve interface. They handle the base-point and marking conventions for you.
+
+**Use explicit integration when you want a finite increment along a particular
+path**, need other differentials, or repeatedly integrate short segments.
+The resolved-basis methods remove the need to recreate the automatic formulas
+yourself.
+
+These methods return callables and metadata for the selected basis. For
+example, integrate the automatic first-kind basis along a finite path::
 
    >>> from mpmath import mp
    >>> from generapy import Curve
