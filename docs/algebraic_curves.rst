@@ -162,17 +162,17 @@ First-kind calculations do not require them.
 Resolved differential bases (advanced)
 """"""""""""""""""""""""""""""""""""""
 
-**Use the Abel-map methods when you want standard Abel coordinates**,
-particularly for combining results with periods, sigma functions or the BA
-curve interface. They handle the base-point and marking conventions for you.
+This advanced, low-level interface exposes the selected differential basis
+as callables and metadata for explicit integration, including repeated short
+segments, without requiring you to recreate the automatic formulas.
 
-**Use explicit integration when you want a finite increment along a particular
-path**, need other differentials, or repeatedly integrate short segments.
-The resolved-basis methods remove the need to recreate the automatic formulas
-yourself.
+For standard Abel coordinates, particularly when working with periods, sigma
+functions or the BA curve interface, use
+:meth:`~generapy.Curve.abel_map_kind_1` or
+:meth:`~generapy.Curve.abel_map_kind_2`; these handle the base-point and marking
+conventions for you.
 
-These methods return callables and metadata for the selected basis. For
-example, integrate the automatic first-kind basis along a finite path::
+For example, integrate the resolved first-kind forms along a finite path::
 
    >>> from mpmath import mp
    >>> from generapy import Curve
