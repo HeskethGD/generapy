@@ -160,34 +160,62 @@ derivatives where sigma itself vanishes. The
 Baker–Akhiezer functions
 ........................
 
-``kleinian_baker_akhiezer`` evaluates the spectrally normalized one-point
-Baker–Akhiezer function for odd-degree hyperelliptic curves. Its argument
-``u`` is a free Jacobian vector; the separate ``target`` is a finite point
-on the curve. For example::
+Baker–Akhiezer functions are functions on algebraic curves with prescribed
+poles and exponential behavior, used to construct spectral eigenfunctions
+and finite-gap solutions of integrable equations [Krichever1977]_. Their
+sigma-function representation builds on classical Abelian function theory;
+see [Baker1907]_.
 
-   from generapy import Curve, kleinian_baker_akhiezer
+Generapy supports hyperelliptic spectral normalization (the default) and
+reference normalization, which sets the value at a chosen argument to one.
+Both support ordinary directional derivatives.
+
+**A hyperelliptic spectral value.** Supply a curve and a spectral point
+:math:`P=(x,y)` on it. Here ``normalization="spectral"`` is shown explicitly;
+it can be omitted::
+
    from mpmath import mp
+   from generapy import Curve, baker_akhiezer, baker_akhiezer_jet
 
+   mp.dps = 30
    curve = Curve({(0, 2): 1, (3, 0): -4, (1, 0): 4})
-   value = kleinian_baker_akhiezer([mp.mpf('0.3')],
-                                  curve=curve, target=(2, mp.sqrt(24)))
+   point = (2, mp.sqrt(24))
+   u = [mp.mpf('0.3')]
+   value = baker_akhiezer(u, curve=curve, point=point,
+                          normalization="spectral")
 
-The automatic curve route supplies compatible first- and second-kind Abel
-integrals from the unique point at infinity, the period data and the
-Riemann characteristic. A sparse polynomial mapping is also accepted.
-``reduce=True`` applies compatible cycle shifts to both integral vectors.
-When supplying explicit vectors, use the same lift, differential basis,
-marking, characteristic and reduction choice throughout.
+**A reference-normalized value.** Select ``normalization="reference"`` and
+provide the argument ``reference=u0`` where the function should equal one::
 
-The denominator contains both ``sigma(u)`` and the sharp derivative at the
-spectral point's Abel image. Both must be nonzero. This sharp normalization
-depends on the canonical hyperelliptic sigma scale; a common sigma multiplier
-does not cancel.
+   u0 = [mp.mpf('0.2')]
+   value = baker_akhiezer(u, curve=curve, point=point,
+                          normalization="reference", reference=u0)
 
-The :doc:`genus-two BA example <examples/baker_akhiezer>` checks the product
-on opposite sheets against the Bolza polynomial [BEH2005]_.
+**Using supplied Abel integrals.** If the Abel shift :math:`A(P)` and
+second-kind vector :math:`R(P)` are already available, pass their vectors
+as ``shift`` and ``second_kind`` instead of ``point``. The curve still
+supplies the period data in this example::
 
-.. autofunction:: generapy.kleinian_baker_akhiezer
+   shift = curve.abel_map_kind_1(point).value
+   second_kind = curve.abel_map_kind_2(point).value
+   value = baker_akhiezer(u, curve=curve, shift=shift, second_kind=second_kind,
+                          normalization="reference", reference=u0)
+
+**Directional derivatives.** Request the value and derivatives through order
+three along :math:`u+t\,d`, with the reference argument held fixed::
+
+   jet = baker_akhiezer_jet(u, curve=curve, point=point,
+                           normalization="reference", reference=u0,
+                           direction=[1], order=3)
+
+The :doc:`genus-two spectral example <examples/baker_akhiezer>` checks the
+product on opposite sheets. The :doc:`reference derivative example
+<examples/reference_ba>` evaluates a BA zero with a finite, nonzero first
+derivative. Formulas, data conventions and parameter requirements follow.
+
+.. autofunction:: generapy.baker_akhiezer
+
+.. autofunction:: generapy.baker_akhiezer_jet
 
 For the classical development of Abelian, theta, sigma, and multiply periodic
 functions, see [Baker1907]_, [BEL1997]_, [CEEK2000]_, [Onishi2005]_,

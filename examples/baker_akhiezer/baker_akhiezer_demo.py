@@ -5,7 +5,7 @@ Run with: python -m examples.baker_akhiezer.baker_akhiezer_demo
 
 from mpmath import mp
 
-from generapy import Curve, kleinian_baker_akhiezer, kleinian_p
+from generapy import Curve, baker_akhiezer, kleinian_p
 
 
 def documentation_example():
@@ -16,8 +16,8 @@ def documentation_example():
         u = [mp.mpf('0.13'), mp.mpf('0.27')]
         x = mp.mpf(3)
         y = mp.sqrt(4*x*(x*x-1)*(x*x-4))
-        psi_plus = kleinian_baker_akhiezer(u, curve=curve, target=(x, y))
-        psi_minus = kleinian_baker_akhiezer(u, curve=curve, target=(x, -y))
+        psi_plus = baker_akhiezer(u, curve=curve, point=(x, y))
+        psi_minus = baker_akhiezer(u, curve=curve, point=(x, -y))
         product = psi_plus * psi_minus
 
         # Braden, Enolskii & Hone (2005), equations (3.3) and (3.8).

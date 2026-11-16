@@ -84,7 +84,9 @@ conventions, including feedback from authors whose work we cite.
 
 The [Baker–Akhiezer example](https://generapy.readthedocs.io/en/latest/examples/baker_akhiezer.html)
 uses the public evaluator on an odd-degree hyperelliptic curve and checks
-the product of its values on opposite sheets.
+the product of its values on opposite sheets. The
+[reference-normalized derivative example](https://generapy.readthedocs.io/en/latest/examples/reference_ba.html)
+checks ordinary BA derivatives through a numerator zero.
 
 Literature-based numerical examples live in the repository's `examples/`
 directory. They are not installed as part of the `generapy` package and do

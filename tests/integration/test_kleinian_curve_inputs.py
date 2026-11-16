@@ -4,7 +4,7 @@ import pytest
 from mpmath import mp
 
 from generapy import (
-    Curve, kleinian_baker_akhiezer, kleinian_p, kleinian_sigma, kleinian_sigma_jet,
+    Curve, baker_akhiezer, kleinian_p, kleinian_sigma, kleinian_sigma_jet,
     kleinian_sigma_normalization, kleinian_zeta,
 )
 from generapy import kleinian as implementation
@@ -133,28 +133,37 @@ def test_ba_curve_route_matches_integral_route(curve):
     characteristic = curve.riemann_constant().characteristic
     abel = curve.abel_map_kind_1(target).value
     integral = curve.abel_map_kind_2(target).value
-    expected = kleinian_baker_akhiezer(
+    expected = baker_akhiezer(
         [.2], abel, integral, first.omega, first.tau, second.kappa,
         characteristic, ctx=ctx)
-    assert ctx.almosteq(kleinian_baker_akhiezer(
-        [.2], curve=curve, target=target), expected)
-    assert ctx.almosteq(kleinian_baker_akhiezer(
-        [.2], curve=POLYNOMIAL, target=target, ctx=ctx), expected)
-    assert ctx.isfinite(kleinian_baker_akhiezer(
-        [.2], curve=curve, target=target, reduce=True))
+    assert ctx.almosteq(baker_akhiezer(
+        [.2], curve=curve, point=target), expected)
+    assert ctx.almosteq(baker_akhiezer(
+        [.2], curve=POLYNOMIAL, point=target, ctx=ctx), expected)
+    assert ctx.isfinite(baker_akhiezer(
+        [.2], curve=curve, point=target, reduce=True))
+    reference = [ctx.mpf('.13')]
+    expected_reference = expected/baker_akhiezer(
+        reference, abel, integral, first.omega, first.tau, second.kappa,
+        characteristic, ctx=ctx)
+    for kwargs in ({'curve': curve, 'point': target},
+                   {'curve': curve, 'shift': abel, 'second_kind': integral},
+                   {'curve': POLYNOMIAL, 'point': target, 'ctx': ctx}):
+        assert ctx.almosteq(baker_akhiezer(
+            [.2], **kwargs, normalization='reference', reference=reference), expected_reference)
 
 
 @pytest.mark.parametrize('kwargs, message', [
-    ({'curve': POLYNOMIAL}, 'requires target'),
-    ({'curve': POLYNOMIAL, 'target': 2, 'abel': [1]}, 'requires target'),
-    ({'target': 2}, 'require curve'),
-    ({'reduce': True}, 'require curve'),
-    ({'curve': {(0, 3): 1, (4, 0): -1, (0, 0): 1}, 'target': 2}, 'odd-degree'),
-    ({'curve': {(0, 2): 1, (4, 0): -1, (0, 0): 1}, 'target': 2}, 'odd-degree'),
+    ({'curve': POLYNOMIAL}, 'supply curve and point'),
+    ({'curve': POLYNOMIAL, 'point': 2, 'shift': [1]}, 'cannot be combined'),
+    ({'point': 2}, 'require curve'),
+    ({'reduce': True}, 'requires curve and point'),
+    ({'curve': {(0, 3): 1, (4, 0): -1, (0, 0): 1}, 'point': 2}, 'odd-degree'),
+    ({'curve': {(0, 2): 1, (4, 0): -1, (0, 0): 1}, 'point': 2}, 'odd-degree'),
 ])
 def test_ba_curve_contract_errors(kwargs, message):
     with pytest.raises(ValueError, match=message):
-        kleinian_baker_akhiezer([.2], **kwargs)
+        baker_akhiezer([.2], **kwargs)
 
 
 def test_custom_basis_uses_theta_scaling(curve, monkeypatch):
@@ -173,7 +182,13 @@ def test_custom_basis_uses_theta_scaling(curve, monkeypatch):
     with pytest.raises(ValueError, match='automatic hyperelliptic basis'):
         kleinian_sigma([.2], curve=custom, normalization='hyperelliptic')
     with pytest.raises(ValueError, match='odd-degree'):
-        kleinian_baker_akhiezer([.2], curve=custom, target=(2, 1))
+        baker_akhiezer([.2], curve=custom, point=(2, 1))
+    kwargs = dict(shift=[.3], second_kind=[.1], reference=[.15], normalization='reference')
+    assert curve.ctx.almosteq(
+        baker_akhiezer([.2], curve=custom, **kwargs),
+        baker_akhiezer([.2], [.3], [.1],
+                      first.omega, first.tau, second.kappa, constant.characteristic,
+                      reference=[.15], normalization='reference', ctx=curve.ctx))
 
 
 def test_curve_precision_changes_refresh_setup(curve):

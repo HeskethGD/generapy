@@ -8,19 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Summary
 
-Generapy now exposes its odd-degree hyperelliptic Baker–Akhiezer evaluator
-through the public API, with a worked numerical example. First- and
-second-kind Abel maps use consistent branch choices, chart continuation
-preserves sheets more reliably, and repeated integrations reuse numerical
+Generapy now exposes Baker–Akhiezer values and ordinary directional derivatives
+with hyperelliptic spectral and reference normalizations, with worked numerical
+examples. First- and second-kind Abel maps use consistent branch choices,
+chart continuation preserves sheets more reliably, and repeated integrations reuse numerical
 setup. Developer and release instructions have moved into dedicated guides,
 and this changelog is displayed in the documentation.
 
 ### Added
 
-- Public `kleinian_baker_akhiezer` evaluator for odd-degree hyperelliptic curves,
-  accepting a `Curve` or sparse polynomial mapping with a spectral target, or
-  compatible explicit integral and period data. Includes a genus-two example
-  checking the product of the functions on opposite sheets.
+- Public `baker_akhiezer` evaluator with hyperelliptic spectral normalization
+  and reference normalization. Accepts a `Curve` or sparse polynomial mapping
+  with a spectral `point`, or compatible explicit `shift`, second-kind and
+  period data. Reference normalization also accepts supplied custom-basis
+  curve data. Includes a genus-two sheet-product example.
+- `baker_akhiezer_jet` returns zero-safe ordinary directional derivatives for
+  both BA normalizations, including dense Abel directions. A reference example
+  checks finite derivatives at a numerator zero.
 
 ### Changed
 
@@ -32,6 +36,8 @@ and this changelog is displayed in the documentation.
 
 ### Performance
 
+- Reuse evaluated theta values and derivative jets for identical requests in
+  bounded, context- and precision-aware caches. Large jets bypass retention.
 - Reuse immutable Gauss rules across repeated path and chart integrations,
   with bounded caches separated by numerical context and precision; construct
   cold rules using symmetric Legendre root iteration.

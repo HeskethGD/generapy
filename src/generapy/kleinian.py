@@ -427,98 +427,248 @@ def kleinian_sigma(u, omega=None, tau=None, kappa=None, characteristic=None,
     return +result
 
 
-def kleinian_baker_akhiezer(u, abel=None, second_kind=None, omega=None,
-                             tau=None, kappa=None, characteristic=None, *,
-                             curve=None, target=None, reduce=False, ctx=None):
-    r"""
-    Evaluate the normalized odd-degree Kleinian Baker--Akhiezer function.
+def _baker_akhiezer_inputs(shift, second_kind, omega, tau, kappa,
+                           characteristic, curve, point, reduce,
+                           normalization, reference, ctx):
+    """Resolve the BA data route before entering evaluation guard precision."""
+    if normalization not in ("spectral", "reference"):
+        raise ValueError("BA normalization must be 'spectral' or 'reference'")
+    if normalization == "reference" and reference is None:
+        raise ValueError("reference normalization requires reference")
+    if normalization == "spectral" and reference is not None:
+        raise ValueError("reference requires normalization='reference'")
+    if curve is not None and not isinstance(curve, Curve):
+        curve = Curve(curve, ctx=ctx)
+    if point is not None:
+        if curve is None:
+            raise ValueError("point and reduce require curve")
+        if shift is not None or second_kind is not None:
+            raise ValueError("point cannot be combined with shift or second_kind")
+    elif reduce:
+        raise ValueError("reduce requires curve and point")
+    elif shift is None or second_kind is None:
+        raise ValueError("supply curve and point, or shift and second_kind")
+    if curve is not None and (point is not None or normalization == "spectral"):
+        model = curve._hyperelliptic_model
+        if model is None or curve._custom_basis or len(model.coefficients) % 2:
+            raise ValueError("this BA route requires an automatic odd-degree hyperelliptic curve")
+    sigma_normalization = "hyperelliptic" if normalization == "spectral" else "theta"
+    ctx, omega, tau, kappa, characteristic, _ = _resolve_kleinian_inputs(
+        omega, tau, kappa, characteristic, curve, ctx, sigma_normalization)
+    if point is not None:
+        point = _as_vector(ctx, point, "point", 2)
+        shift = curve.abel_map_kind_1(point, reduce=reduce).value
+        second_kind = curve.abel_map_kind_2(point, reduce=reduce).value
+    return ctx, omega, tau, kappa, characteristic, shift, second_kind
 
-    Given compatible first- and second-kind integral vectors
-    :math:`A(P)` and :math:`R(P)`, this evaluates
+
+def _require_baker_normalizer(ctx, value, argument, characteristic, name,
+                              origin_zero=False):
+    """Reject computed zeros and known exact origin zeros, without a cutoff."""
+    a, b = characteristic
+    odd = (all(ctx.isint(2*v) for v in a + b)
+           and int(4*ctx.fsum(x*y for x, y in zip(a, b))) % 2 == 1)
+    if not value or (not any(argument) and (origin_zero or odd)):
+        raise ZeroDivisionError(f"BA {name} vanishes; choose a regular chart")
+
+
+def baker_akhiezer(u, shift=None, second_kind=None, omega=None,
+                    tau=None, kappa=None, characteristic=None, *,
+                    curve=None, point=None, reduce=False,
+                    normalization="spectral", reference=None, ctx=None):
+    r"""Evaluate a Baker--Akhiezer function with spectral or reference normalization.
+
+    ``u`` is a Jacobian argument vector. Choose one normalization and one
+    of the data routes described below.
+
+    .. rubric:: Hyperelliptic spectral normalization (default)
+
+    Set ``normalization="spectral"``, or omit it, to evaluate
 
     .. math::
 
-        \Psi(P,u)=
-        \frac{\sigma(A(P)-u)}
-             {\sigma_\sharp(A(P))\sigma(u)}
-        \exp\!\left(-R(P)^T u\right).
+        \Psi(P,u)=\frac{\sigma(A(P)-u)}
+        {\sigma_\sharp(A(P))\sigma(u)}\exp(-R(P)^T u).
 
-    Here :math:`\sigma_\sharp` is the first nonzero sigma derivative on the
-    one-point theta stratum: :math:`\sigma` in genus one and, in the present
-    coordinate order, the derivative with multi-index ``(0, 1, 0, 1, ...)``
-    in higher genus. This is Onishi's ``sigma_sharp`` normalization; in
-    genus two it is the conventional :math:`\sigma_2(A(P))` factor of the
-    normalized Baker function. It fixes the formerly arbitrary factor
-    depending on :math:`P` and gives the standard leading local behavior at
-    the unique point at infinity. See [Onishi2005]_, Definition 6.1 and
-    Proposition 6.6, and [BEH2005]_, equation (3.3).
+    This is the odd-degree hyperelliptic convention, with infinity as Abel
+    origin and the canonical hyperelliptic sigma scale. Leave ``reference``
+    unset in this mode. The sharp factor is :math:`\sigma` in genus one and
+    the sigma derivative with multi-index ``(0,1,0,1,...)`` otherwise, in the
+    automatic coordinate order. See [Onishi2005]_, Definition 6.1 and
+    Proposition 6.6, and [BEH2005]_, equation (3.3). The exponential uses
+    the BEL sign convention described in [CEEK2000]_, equations (3.21)--(3.22).
 
-    Alternatively, ``curve`` and ``target`` derive both integrals and the
-    period data together. This route requires the automatic odd-degree
-    hyperelliptic basis, with infinity as the base point. ``reduce`` applies
-    the same lattice reduction to both Abel maps. Explicit integral vectors
-    and period data cannot be combined with this route.
+    .. rubric:: Reference normalization
 
-    ``abel`` and ``second_kind`` should normally be obtained from
-    the ``value`` fields returned by ``Curve.abel_map_kind_1`` and
-    ``Curve.abel_map_kind_2``, using the same
-    target and reduction choice. The
-    remaining inputs use the same conventions as
-    :func:`~generapy.kleinian_sigma`. Sigma is evaluated with its canonical
-    ``normalization="hyperelliptic"``; this is required because its
-    multiplicative constant does not cancel from the normalized expression.
-    The denominator is singular when ``u`` lies on the sigma divisor or
-    ``sigma_sharp(abel)`` vanishes. Use one finite spectral point ``target``
-    with a nonzero sharp normalizer. The explicit-data route requires the
-    same odd-degree hyperelliptic basis, characteristic and infinity-based
-    lift; arbitrary period data do not define this spectral normalization.
+    Set ``normalization="reference"`` and supply ``reference=u0`` to evaluate
 
-    The sign in the exponential converts the positive second-kind periods of
-    Christiansen, Eilbeck, Enolskii and Kostov to the classical BEL convention
-    used here, :math:`2\eta=-\oint_a dr`. See [CEEK2000]_, equations (3.21)
-    and (3.22).
+    .. math::
 
-    This evaluator uses infinity-based Abel integrals on an odd-degree
-    hyperelliptic curve.
+        B(u;u_0)=\frac{\sigma(A-u)\sigma(u_0)}
+        {\sigma(u)\sigma(A-u_0)}\exp(-R^T(u-u_0)).
 
+    Here :math:`A` is ``shift`` and :math:`R` is ``second_kind``. This gives
+    :math:`B(u_0;u_0)=1` and agrees with :math:`\Psi(P,u)/\Psi(P,u_0)` on
+    their common regular domain. The sharp factor and multiplicative sigma
+    scale cancel. Reference normalization also accepts compatible supplied
+    data for other curves, including custom differential bases.
+
+    .. rubric:: Curve points and supplied Abel data
+
+    * With ``curve=curve_or_mapping`` and ``point=(x,y)``, the evaluator
+      computes :math:`A(P)`, :math:`R(P)`, periods and characteristic together.
+      This automatic point route uses the odd-degree hyperelliptic basis.
+      ``point`` is an affine curve point, rather than a Jacobian vector.
+      ``reduce=True`` applies compatible cycle shifts to both Abel integrals.
+    * With ``shift=A`` and ``second_kind=R``, supply the Abel integral vectors
+      directly. These are the ``value`` fields from
+      ``Curve.abel_map_kind_1`` and ``Curve.abel_map_kind_2``, evaluated at the
+      same point with the same lift and reduction choice. Supply either
+      ``curve`` for its period data, or explicit ``omega``, ``tau``, ``kappa``
+      and the appropriate ``characteristic``. Spectral normalization requires
+      the hyperelliptic basis and characteristic; reference normalization
+      allows compatible custom-basis curve or explicit period data.
+
+    Do not combine ``point`` with ``shift`` or ``second_kind``, or ``curve``
+    with explicit period matrices or characteristic. ``reduce`` is available
+    with the automatic point route. All supplied vectors, periods and
+    exponential data must share differential, coordinate and path conventions
+    to represent the intended spectral BA function. ``ctx`` follows the same
+    convention as :func:`kleinian_sigma`.
+
+    .. rubric:: Regularity
+
+    Both modes require :math:`\sigma(u)\ne0`. Spectral normalization also
+    requires :math:`\sigma_\sharp(A)\ne0`; reference normalization requires
+    :math:`\sigma(u_0)\ne0` and :math:`\sigma(A-u_0)\ne0`. Known zero
+    normalizers raise ``ZeroDivisionError``. Near these divisors, choose a
+    regular argument or reference and sufficient working precision.
     """
-    if curve is not None:
-        if target is None or abel is not None or second_kind is not None:
-            raise ValueError("the BA curve route requires target instead of integral vectors")
-        if not isinstance(curve, Curve):
-            curve = Curve(curve, ctx=ctx)
-        model = curve._hyperelliptic_model
-        if model is None or curve._custom_basis or len(model.coefficients) % 2:
-            raise ValueError("the BA curve route requires an automatic odd-degree hyperelliptic curve")
-        ctx, omega, tau, kappa, characteristic, _ = _resolve_kleinian_inputs(
-            omega, tau, kappa, characteristic, curve, ctx)
-        abel = curve.abel_map_kind_1(target, reduce=reduce).value
-        second_kind = curve.abel_map_kind_2(target, reduce=reduce).value
-    elif target is not None or reduce:
-        raise ValueError("target and reduce require curve")
-    ctx = resolve_context(ctx)
+    return _baker_akhiezer_evaluate(
+        u, shift, second_kind, omega, tau, kappa, characteristic,
+        direction=None, order=0, curve=curve, point=point, reduce=reduce,
+        normalization=normalization, reference=reference, ctx=ctx)[0]
+
+
+def baker_akhiezer_jet(u, shift=None, second_kind=None, omega=None,
+                        tau=None, kappa=None, characteristic=None, *,
+                        direction, order, curve=None, point=None, reduce=False,
+                        normalization="spectral", reference=None, ctx=None):
+    r"""Evaluate ordinary directional derivatives of a Baker--Akhiezer function.
+
+    Supply ``direction=d`` and ``order=n``. The returned tuple contains
+
+    .. math::
+
+        \begin{gathered}
+        \left(F(u),D_dF(u),\ldots,D_d^nF(u)\right),\\
+        D_d=\sum_i d_i\frac{\partial}{\partial u_i}.
+        \end{gathered}
+
+    where :math:`F=\Psi` for spectral normalization and :math:`F=B` for
+    reference normalization. These are ordinary derivatives along
+    :math:`u+t\,d` at :math:`t=0`, rather than factorial-scaled Taylor
+    coefficients. ``direction`` uses the same Abelian coordinates as ``u``;
+    ``order`` is a nonnegative integer. For reference normalization,
+    :math:`u_0` is held fixed.
+
+    The data routes and normalization parameters are the same as for
+    :func:`baker_akhiezer`. Both modes allow finite derivatives at numerator
+    zeros when the function is regular. See the
+    :doc:`reference derivative example </examples/reference_ba>`.
+
+    **Example**::
+
+        >>> from generapy import Curve, baker_akhiezer_jet
+        >>> from mpmath import mp
+        >>> curve = Curve({(0, 2): 1, (3, 0): -4, (1, 0): 4})
+        >>> jet = baker_akhiezer_jet([.3], curve=curve, point=(2, mp.sqrt(24)),
+        ...                          direction=[1], order=3)
+        >>> len(jet)
+        4
+    """
+    if direction is None:
+        raise ValueError("direction must be a vector")
+    return _baker_akhiezer_evaluate(
+        u, shift, second_kind, omega, tau, kappa, characteristic,
+        direction=direction, order=order, curve=curve, point=point, reduce=reduce,
+        normalization=normalization, reference=reference, ctx=ctx)
+
+
+def _sigma_directional_jet(ctx, argument, direction, order, omega, tau,
+                            kappa, characteristic, normalization):
+    """Contract ordinary mixed sigma derivatives into one flow direction."""
+    jet = kleinian_sigma_jet(argument, omega, tau, kappa, order, characteristic,
+                              normalization=normalization, ctx=ctx)
+    result = []
+    for n in range(order+1):
+        result.append(ctx.fsum(
+            (math.factorial(n) // math.prod(math.factorial(k) for k in index))
+            * ctx.fprod(d**k for d, k in zip(direction, index)) * value
+            for index, value in jet.items() if sum(index) == n))
+    return tuple(result)
+
+
+def _baker_akhiezer_evaluate(u, shift, second_kind, omega, tau, kappa,
+                             characteristic, *, direction, order, curve, point,
+                             reduce, normalization, reference, ctx):
+    """Share the scalar and ordinary-jet implementation."""
+    if not isinstance(order, int) or isinstance(order, bool) or order < 0:
+        raise ValueError("order must be a nonnegative integer")
+    ctx, omega, tau, kappa, characteristic, shift, second_kind = _baker_akhiezer_inputs(
+        shift, second_kind, omega, tau, kappa, characteristic, curve, point,
+        reduce, normalization, reference, ctx)
     with ctx.extraprec(10):
-        omega_matrix = _normalise_kleinian_matrix(ctx, omega, "omega")
-        genus = omega_matrix.rows
+        omega = _normalise_kleinian_matrix(ctx, omega, "omega")
+        genus = omega.rows
         u = _as_vector(ctx, u, "u", genus)
-        abel = _as_vector(ctx, abel, "abel", genus)
-        second_kind = _as_vector(
-            ctx, second_kind, "second_kind", genus)
-        shifted = tuple(abel[index] - u[index]
-                        for index in range(genus))
-        numerator = kleinian_sigma(
-            shifted, omega_matrix, tau, kappa, characteristic,
-            normalization="hyperelliptic", ctx=ctx)
-        denominator = kleinian_sigma(
-            u, omega_matrix, tau, kappa, characteristic,
-            normalization="hyperelliptic", ctx=ctx)
-        spectral_normalization = _kleinian_sigma_sharp(
-            ctx, abel, omega_matrix, tau, kappa, characteristic)
-        exponent = -ctx.fsum(
-            second_kind[index] * u[index] for index in range(genus))
-        result = (numerator * ctx.exp(exponent)
-                  / (spectral_normalization * denominator))
-    return +result
+        shift = _as_vector(ctx, shift, "shift", genus)
+        second_kind = _as_vector(ctx, second_kind, "second_kind", genus)
+        direction = ((ctx.zero,) * genus if direction is None else
+                     _as_vector(ctx, direction, "direction", genus))
+        characteristic = _normalise_characteristic(ctx, characteristic, genus)
+        sigma_normalization = "hyperelliptic" if normalization == "spectral" else "theta"
+
+        def sigma(argument):
+            return kleinian_sigma(argument, omega, tau, kappa, characteristic,
+                                  normalization=sigma_normalization, ctx=ctx)
+
+        numerator = _sigma_directional_jet(
+            ctx, tuple(a-v for a, v in zip(shift, u)), tuple(-d for d in direction),
+            order, omega, tau, kappa, characteristic, sigma_normalization)
+        denominator = _sigma_directional_jet(
+            ctx, u, direction, order, omega, tau, kappa, characteristic, sigma_normalization)
+        _require_baker_normalizer(ctx, denominator[0], u, characteristic, "denominator",
+                                  curve is not None or normalization == "spectral")
+        if normalization == "spectral":
+            sharp = _kleinian_sigma_sharp(ctx, shift, omega, tau, kappa, characteristic)
+            _require_baker_normalizer(ctx, sharp, shift, characteristic, "sharp normalizer", True)
+            factor = 1/sharp
+            delta = u
+        else:
+            reference = _as_vector(ctx, reference, "reference", genus)
+            reference_shift = tuple(a-v for a, v in zip(shift, reference))
+            reference_sigma, reference_numerator = sigma(reference), sigma(reference_shift)
+            _require_baker_normalizer(ctx, reference_sigma, reference, characteristic,
+                                      "reference denominator", curve is not None)
+            _require_baker_normalizer(ctx, reference_numerator, reference_shift, characteristic,
+                                      "reference numerator", curve is not None)
+            factor = reference_sigma/reference_numerator
+            delta = tuple(v-r for v, r in zip(u, reference))
+        exponential = ctx.exp(-ctx.fsum(r*v for r, v in zip(second_kind, delta)))
+        rate = -ctx.fsum(r*d for r, d in zip(second_kind, direction))
+        exponential_numerator = tuple(exponential * ctx.fsum(
+            math.comb(n, k) * rate**(n-k) * numerator[k] for k in range(n+1))
+            for n in range(order+1))
+        # N = D Q gives a recurrence dividing only by D[0]. It remains
+        # defined at numerator zeros where logarithmic differentiation fails.
+        quotient = []
+        for n in range(order+1):
+            quotient.append((exponential_numerator[n] - ctx.fsum(
+                math.comb(n, j)*denominator[j]*quotient[n-j]
+                for j in range(1, n+1))) / denominator[0])
+        result = tuple(factor*value for value in quotient)
+    return tuple(+value for value in result)
 
 
 def kleinian_sigma_jet(u, omega=None, tau=None, kappa=None, order=None,

@@ -11,6 +11,7 @@ repository's ``examples/`` directory.
 
    baker_formula
    baker_akhiezer
+   reference_ba
    bernatska
    bobenko
    bobenko_curve_data
