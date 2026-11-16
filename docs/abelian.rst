@@ -66,6 +66,16 @@ illustrated in `DLMF section 21.4 <https://dlmf.nist.gov/21.4>`_.
 
 .. autofunction:: generapy.rtheta_jet
 
+For derivatives along a single direction, ``rtheta_directional_jet`` returns
+only the requested ordinary derivatives, including the value. For example::
+
+   from generapy import rtheta_directional_jet
+
+   theta_jet = rtheta_directional_jet([0.1, 0.2], [[1j, 0], [0, 1j]],
+                                     direction=[1, -0.5], order=3)
+
+.. autofunction:: generapy.rtheta_directional_jet
+
 Curve data for Kleinian functions
 .................................
 
@@ -152,6 +162,17 @@ derivatives where sigma itself vanishes. The
 .. autofunction:: generapy.kleinian_sigma
 
 .. autofunction:: generapy.kleinian_sigma_jet
+
+``kleinian_sigma_directional_jet`` evaluates derivatives along :math:`u+t\,d`
+using the same curve, period and normalization conventions as sigma. Its tuple
+contains ordinary derivatives from order zero through the requested order::
+
+   from generapy import kleinian_sigma_directional_jet
+
+   jet = kleinian_sigma_directional_jet([0.2], curve=curve,
+                                        direction=[1], order=3)
+
+.. autofunction:: generapy.kleinian_sigma_directional_jet
 
 .. autofunction:: generapy.kleinian_zeta
 

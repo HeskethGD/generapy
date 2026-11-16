@@ -889,8 +889,9 @@ def test_rtheta_cost_selected_genus_three_second_derivative():
     threshold = _derivative_reduction_threshold(
         mp, 3, 2, (derivative,))
 
-    # The old threshold charged ten complete traversals and was 40. The
-    # shared-work estimate is 13, so this reduction is no longer missed.
+    # Reduced and requested outputs share each lattice traversal. The relative
+    # per-point estimate is smaller than the former fortyfold saving threshold;
+    # actual derivative radii and composition are handled by the selector.
     assert threshold < point_ratio < 40
     with mp.extraprec(25):
         direct = _rtheta_sum(

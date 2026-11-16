@@ -148,6 +148,11 @@ jobs:
               normalization='reference', reference=[mp.mpf('0.3')])
           assert mp.almosteq(jet[0], 1)
           assert all(mp.isfinite(v) for v in jet)
+          theta_jet = generapy.rtheta_directional_jet([0], [[mp.j]], [1], 2)
+          assert mp.almosteq(theta_jet[0], generapy.rtheta([0], [[mp.j]]))
+          sigma_jet = generapy.kleinian_sigma_directional_jet(
+              [mp.mpf('0.3')], curve=curve, direction=[1], order=2)
+          assert mp.almosteq(sigma_jet[0], generapy.kleinian_sigma([mp.mpf('0.3')], curve=curve))
           print("Installed-wheel smoke checks passed.")
           PY
       - uses: actions/upload-artifact@v7

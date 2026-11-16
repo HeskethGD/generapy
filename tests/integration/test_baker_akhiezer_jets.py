@@ -67,9 +67,9 @@ def test_multiple_ba_points_reuse_denominator_jet_without_public_state(curve):
     u = list(map(ctx.mpf, ('.13', '.27')))
     kwargs = dict(curve=curve, direction=[0, 1], order=3)
     baker_akhiezer_jet(u, point=(3, ctx.sqrt(480)), **kwargs)
-    hits = rt._rtheta_evaluation_cache.cache_info(ctx).hits
+    hits = rt._rtheta_directional_evaluation_cache.cache_info(ctx).hits
     baker_akhiezer_jet(u, point=(4, ctx.sqrt(2880)), **kwargs)
-    assert rt._rtheta_evaluation_cache.cache_info(ctx).hits > hits
+    assert rt._rtheta_directional_evaluation_cache.cache_info(ctx).hits > hits
 
 
 def test_reference_jets_are_invariant_under_compatible_cycle_reduction(curve):

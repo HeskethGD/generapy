@@ -27,6 +27,7 @@ def main():
     ctx.dps = 30
     rt = importlib.import_module('generapy.riemann_theta')
     cache = rt._rtheta_evaluation_cache
+    directional_cache = rt._rtheta_directional_evaluation_cache
     results = {}
     try:
         for genus in (2, 3):
@@ -77,9 +78,12 @@ def main():
                 timings = {}
                 for enabled in (False, True):
                     rt._rtheta_evaluation_cache = cache if enabled else rt._rtheta_evaluate
+                    rt._rtheta_directional_evaluation_cache = (
+                        directional_cache if enabled else rt._rtheta_directional_evaluate)
                     elapsed = []
                     for _ in range(args.repeats):
                         cache.cache_clear(ctx)
+                        directional_cache.cache_clear(ctx)
                         start = perf_counter()
                         actual = workload()
                         elapsed.append(perf_counter()-start)
@@ -89,6 +93,7 @@ def main():
                 results[f'g{genus}: {name}'] = timings
     finally:
         rt._rtheta_evaluation_cache = cache
+        rt._rtheta_directional_evaluation_cache = directional_cache
     print(json.dumps({
         'version': generapy.__version__, 'python': platform.python_version(),
         'platform': platform.platform(), 'dps': ctx.dps,

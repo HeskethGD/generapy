@@ -10,13 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Generapy now exposes Baker–Akhiezer values and ordinary directional derivatives
 with hyperelliptic spectral and reference normalizations, with worked numerical
-examples. First- and second-kind Abel maps use consistent branch choices,
+examples. Directional theta and sigma jets avoid constructing full derivative
+tensors, and theta reduction selection accounts for derivative work.
+First- and second-kind Abel maps use consistent branch choices,
 chart continuation preserves sheets more reliably, and repeated integrations reuse numerical
 setup. Developer and release instructions have moved into dedicated guides,
 and this changelog is displayed in the documentation.
 
 ### Added
 
+- `rtheta_directional_jet` and `kleinian_sigma_directional_jet` evaluate
+  ordinary derivatives along a supplied real or complex direction, including
+  through theta period reduction.
 - Public `baker_akhiezer` evaluator with hyperelliptic spectral normalization
   and reference normalization. Accepts a `Curve` or sparse polynomial mapping
   with a spectral `point`, or compatible explicit `shift`, second-kind and
@@ -36,6 +41,11 @@ and this changelog is displayed in the documentation.
 
 ### Performance
 
+- Refine theta derivative reduction selection using derivative truncation
+  radii, argument shifts, tensor composition and transformed-direction costs.
+  Preserve fast decisions for well-conditioned and strongly unreduced cases.
+- BA directional jets use direct theta/sigma directional evaluation without
+  constructing the full mixed-derivative tensor. The BA interface is unchanged.
 - Reuse evaluated theta values and derivative jets for identical requests in
   bounded, context- and precision-aware caches. Large jets bypass retention.
 - Reuse immutable Gauss rules across repeated path and chart integrations,
