@@ -18,6 +18,9 @@ benchmarks/
 
 ## Prerequisites
 
+The [v0.2.0 pre-release record](baselines/v0.2.0/README.md) contains matched
+Generapy revision comparisons and context against the saved v0.1.0 timings.
+
 To check changes against a previous Generapy revision without external tools:
 
 ```sh
@@ -36,7 +39,7 @@ mathematics tools are launched. Seven samples are collected per numerical
 workload and three per curve/revision by default; the complete run can take
 several minutes.
 
-Use `--groups`, `--filter`, `--repeats` and `--curve-repeats` for bounded runs,
+Use `--groups`, `--filter`, `--theta-dps`, `--repeats` and `--curve-repeats` for bounded runs,
 or `--reverse-order` to reverse which revision runs first in each alternating
 pair. Output paths must be new. Raw reports are experimental; use their matched
 revision timings to assess a PR, rather than attributing differences from old

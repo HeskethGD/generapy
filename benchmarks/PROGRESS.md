@@ -22,6 +22,33 @@ Each entry should include:
 
 <!-- Entries will be added as releases occur and optimizations are made -->
 
+### v0.2.0 pre-release: matched Generapy regression checks (2026-11-16)
+
+**Reports:** [overview and protocol](baselines/v0.2.0/README.md),
+[theta, mixed jets and BA](baselines/v0.2.0/theta_and_ba.md),
+[curve periods](baselines/v0.2.0/curve_periods.md).
+
+Compared previous main `6134a3d` with candidate `4f6475f` in isolated archived
+source trees using the same Python 3.14.7 and mpmath 1.4.1. No external
+mathematical tools were run. Historical genus-one, higher-genus theta and
+all 26 curve cases were reused, plus mixed-jet and BA controls. All 268
+workload/precision combinations passed output checks, including both expected
+singular-curve rejections. Valid curve trials also passed curve validation.
+
+Geometric-mean candidate/previous time ratios were 1.004 for genus-one,
+0.995 for scalar theta, 0.901 for mixed theta/sigma jets, 0.580 for BA and
+1.000 for valid curve cases. Ratios below one mean faster evaluation. An
+initial 15.6% increase in one short genus-one derivative workload became 1.2%
+with 31 samples and reversed order. No repeatable large slowdown was found
+in the tested workloads; the complete tables retain all initial measurements.
+
+Compared with saved v0.1.0 times, cold genus-one measurements are about 4.8%
+higher overall; previous main was already about 4.1% higher. Historical theta
+reports used a different Python version, and the curve report omits interpreter
+metadata, so those cross-date differences cannot be assigned to this PR.
+The reports distinguish saved-number comparisons from the matched regression
+control. This directory records a release candidate, not a published release.
+
 ### Development: directional jets and derivative-aware reduction (2026-11-16)
 
 **Benchmark:** `python -m benchmarks.rtheta.benchmark_directional_jets`
@@ -72,9 +99,9 @@ directional jet went from 55.66 ms to 59.39 ms (6.7% slower) at 24 digits and
 87.38 ms to 91.52 ms (4.7% slower) at 40 digits. Other control differences were
 mostly single-digit percentages in either direction. With only two repeats,
 these are observed slowdowns requiring more sampling, not established
-regressions. The historical Sage, Wolfram and genus-one baselines below were
-not rerun for this change, so this entry does not establish performance changes
-against those release results.
+regressions. The later v0.2.0 matched comparison above reuses the Generapy side
+of the historical workloads with more samples. Those reports supersede this
+early run for regression assessment; the external tools were not rerun.
 
 Reproduce the bounded comparisons from the repository root:
 
