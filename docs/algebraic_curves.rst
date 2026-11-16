@@ -162,15 +162,15 @@ First-kind calculations do not require them.
 Resolved differential bases (advanced)
 """"""""""""""""""""""""""""""""""""""
 
+**Note:** For standard Abel coordinates, particularly when working with
+periods, sigma functions or the BA curve interface, use
+:meth:`~generapy.Curve.abel_map_kind_1` or
+:meth:`~generapy.Curve.abel_map_kind_2` instead of these methods; these handle
+the base-point and marking conventions for you.
+
 This advanced, low-level interface exposes the selected differential basis
 as callables and metadata for explicit integration, including repeated short
 segments, without requiring you to recreate the automatic formulas.
-
-For standard Abel coordinates, particularly when working with periods, sigma
-functions or the BA curve interface, use
-:meth:`~generapy.Curve.abel_map_kind_1` or
-:meth:`~generapy.Curve.abel_map_kind_2`; these handle the base-point and marking
-conventions for you.
 
 For example, integrate the resolved first-kind forms along a finite path::
 
