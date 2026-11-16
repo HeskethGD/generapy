@@ -28,7 +28,7 @@ from time import perf_counter
 REPO = Path(__file__).resolve().parents[1]
 
 
-def jobs(groups):
+def jobs(groups, theta_dps=(50, 100)):
     """Reuse exact inputs; historical timing columns are context, not controls."""
     result = []
 
@@ -47,7 +47,7 @@ def jobs(groups):
                             derivative=[degree], angular=True, cold=mode == 'cold')
     if 'theta' in groups:
         from benchmarks.rtheta import benchmark_rtheta_vs_wolfram as fixtures
-        for dps in (30, 100):
+        for dps in theta_dps:
             for case in fixtures.CASES:
                 for label in fixtures.workloads(case):
                     if 'dz' in label and dps > case.get('derivative_max_dps', dps):
@@ -187,6 +187,8 @@ def main():
     parser.add_argument('--groups', nargs='+', choices=['genus-one', 'theta', 'jets', 'ba', 'curves'],
                         default=['genus-one', 'theta', 'jets', 'ba', 'curves'])
     parser.add_argument('--repeats', type=int, default=7)
+    parser.add_argument('--theta-dps', type=int, nargs='+', default=[50, 100],
+                        help='Higher-genus scalar-theta precisions; historical reports use 50 and 100')
     parser.add_argument('--curve-repeats', type=int, default=3)
     parser.add_argument('--reverse-order', action='store_true', help='Reverse the alternating revision order')
     parser.add_argument('--filter', default='*', help='Glob matched against group/case/dps')
@@ -195,7 +197,7 @@ def main():
     args = parser.parse_args()
     if args.output.exists() or args.repeats < 1 or args.curve_repeats < 1:
         parser.error('use a new output path and positive repeat counts')
-    selected = [j for j in jobs(args.groups) if fnmatch.fnmatch(f'{j["group"]}/{j["case"]}/{j["dps"]}', args.filter)]
+    selected = [j for j in jobs(args.groups, args.theta_dps) if fnmatch.fnmatch(f'{j["group"]}/{j["case"]}/{j["dps"]}', args.filter)]
     if not selected:
         parser.error('no matching jobs')
     source_before = subprocess.check_output(['git', 'diff', 'HEAD'], cwd=REPO)
