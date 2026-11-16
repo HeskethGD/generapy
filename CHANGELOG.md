@@ -41,6 +41,9 @@ and this changelog is displayed in the documentation.
 
 ### Performance
 
+- Share chart coordinate conversion and ambient-curve validation across
+  differential components at each quadrature node, reusing polynomial terms
+  for the residual and scale checks.
 - Refine theta derivative reduction selection using derivative truncation
   radii, argument shifts, tensor composition and transformed-direction costs.
   Preserve fast decisions for well-conditioned and strongly unreduced cases.

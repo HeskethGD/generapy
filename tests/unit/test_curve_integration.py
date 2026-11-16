@@ -215,6 +215,7 @@ def test_zero_length_paths_have_zero_ordinary_and_iterated_integrals():
 @pytest.mark.parametrize("options,message", [
     ({"quadrature_order": 1}, "integer at least 2"),
     ({"check_convergence": "yes"}, "must be boolean"),
+    ({"differential_evaluator": 1}, "must be callable"),
 ])
 def test_chart_quadrature_rejects_invalid_controls(options, message):
     from generapy.curves.continuation import _continue_plane_curve_branch
@@ -277,6 +278,28 @@ def test_chart_pullback_applies_dx_dt_and_validates_inputs():
         _pullback_plane_curve_differentials((), lambda t, u: (t, u, 1))
     with pytest.raises(ValueError, match="coordinate_map must be callable"):
         _pullback_plane_curve_differentials((lambda x, y: x,), None)
+
+
+def test_chart_batch_evaluator_survives_order_refinement_and_checks_size():
+    from generapy.curves.continuation import _continue_plane_curve_branch
+    from generapy.curves.integration import _integrate_plane_curve_branch
+    ctx = mp.clone()
+    ctx.dps = 25
+    curve = _prepare_plane_curve(ctx, {(0, 1): 1, (1, 0): -1})
+    branch = _continue_plane_curve_branch(ctx, curve, (0, 1), 0)
+
+    def scalar(t, u):
+        raise AssertionError('the batch evaluator supplies the pulled-back forms')
+
+    result = _integrate_plane_curve_branch(
+        ctx, curve, branch, (scalar, scalar), check_convergence=True,
+        differential_evaluator=lambda t, u: (t, u*u))
+    assert ctx.almosteq(result.values[0], ctx.mpf(1)/2)
+    assert ctx.almosteq(result.values[1], ctx.mpf(1)/3)
+    with pytest.raises(ValueError, match='wrong number of values'):
+        _integrate_plane_curve_branch(
+            ctx, curve, branch, (scalar, scalar),
+            differential_evaluator=lambda t, u: (t,))
 
 
 def test_chart_quadrature_rejects_inconsistent_branch_data():

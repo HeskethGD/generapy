@@ -12,11 +12,9 @@ from ._stages import _curve_differential_sequence
 from .continuation import _continue_plane_curve_branch
 from .integration import (
     _integrate_plane_curve_branch,
-    _pullback_plane_curve_differentials,
 )
 from .jacobian import _normalize_algebraic_curve_input
 from .polynomial import (
-    _evaluate_plane_polynomial,
     _finite_plane_curve_sheets,
     _monomial_plane_curve_chart,
     _prepare_plane_curve,
@@ -79,11 +77,10 @@ def _validated_chart_coordinate_map(ctx, chart):
         if not all(ctx.isfinite(value) for value in (x, y, dx_dt)):
             raise ValueError(
                 "chart coordinate map must be finite away from the place")
-        scale = max(ctx.one, ctx.fsum(
-            abs(coefficient * x ** x_power * y ** y_power)
-            for x_power, y_power, coefficient in ambient_curve.terms))
-        if abs(_evaluate_plane_polynomial(
-                ctx, ambient_curve, x, y)) > (
+        terms = tuple(coefficient * x ** x_power * y ** y_power
+                      for x_power, y_power, coefficient in ambient_curve.terms)
+        scale = max(ctx.one, ctx.fsum(abs(term) for term in terms))
+        if abs(ctx.fsum(terms)) > (
                 100 * ctx.sqrt(ctx.eps) * scale):
             raise ValueError("chart does not parametrize its ambient curve")
         return x, y, dx_dt
@@ -182,10 +179,16 @@ def chart_integral(ctx, chart, differentials, t_path, seed):
         raise ValueError("t_path values must be finite")
     branch = _continue_plane_curve_branch(
         ctx, chart.curve, t_path, seed)
-    pullbacks = _pullback_plane_curve_differentials(
-        forms, _validated_chart_coordinate_map(ctx, chart))
+    coordinate_map = _validated_chart_coordinate_map(ctx, chart)
+
+    def evaluate(t, w):
+        # All forms share one coordinate conversion and ambient-curve check
+        # at this node; no evaluated coordinates survive the current sample.
+        x, y, dx_dt = coordinate_map(t, w)
+        return tuple(form(x, y) * dx_dt for form in forms)
+
     integral = _integrate_plane_curve_branch(
-        ctx, chart.curve, branch, pullbacks)
+        ctx, chart.curve, branch, forms, differential_evaluator=evaluate)
     values = integral.values[0] if single else integral.values
     return CurveIntegral(
         values, integral.max_sheet_residual, integral.segments)
