@@ -1,6 +1,6 @@
 # Benchmark Progress Log
 
-This file tracks significant performance improvements and benchmark baseline updates for genera. Each entry documents changes that affected performance characteristics.
+This file tracks significant performance improvements and benchmark baseline updates for generapy. Each entry documents changes that affected performance characteristics.
 
 ## Purpose
 
@@ -63,9 +63,18 @@ at 24 digits, and 0.233–0.237 s becomes 0.135–0.136 s at 40 digits. The
 coordinate directional jet also selects reduction; the dense direction stays
 direct because reduction makes its direction complex and costs more. The
 coupled and strongly unreduced controls retain their existing path choices.
-Their measured times mostly differ by single-digit percentages; one short
-directional sample differed by 17%, so these runs do not establish a universal
-speedup or a strict regression bound.
+The full-versus-directional table above compares two evaluation methods in
+this implementation, rather than two releases. The selector before/after
+comparison used development trees with directional jets already implemented.
+Some control timings increased: the genus-three unreduced dense directional
+jet at 24 digits went from 19.14 ms to 22.40 ms (17% slower), and the #17 dense
+directional jet went from 55.66 ms to 59.39 ms (6.7% slower) at 24 digits and
+87.38 ms to 91.52 ms (4.7% slower) at 40 digits. Other control differences were
+mostly single-digit percentages in either direction. With only two repeats,
+these are observed slowdowns requiring more sampling, not established
+regressions. The historical Sage, Wolfram and genus-one baselines below were
+not rerun for this change, so this entry does not establish performance changes
+against those release results.
 
 Reproduce the bounded comparisons from the repository root:
 
@@ -92,10 +101,10 @@ No tail criterion was relaxed to obtain the timing changes.
 - `baselines/v0.1.0/rtheta_vs_jtheta.md` - Riemann theta vs jtheta
 - `baselines/v0.1.0/rtheta_vs_wolfram.md` - Riemann theta vs Wolfram Engine
 
-**Summary**: Established initial performance baseline for genera
+**Summary**: Established initial performance baseline for generapy
 
 **Algebraic curve periods (curves_vs_sage.md):**
-- **Hyperelliptic curves**: genera is 5-10x faster than Sage across all genera (1-4) and precision levels (30-50 digits)
+- **Hyperelliptic curves**: generapy is 5-10x faster than Sage across all genera (1-4) and precision levels (30-50 digits)
   - Genus 1, 30 digits: 0.018s vs 0.168s (9.4x faster)
   - Genus 2, 30 digits: 0.066s vs 0.508s (7.7x faster)
   - Genus 3, 30 digits: 0.162s vs 1.186s (7.3x faster)
@@ -103,27 +112,26 @@ No tail criterion was relaxed to obtain the timing changes.
   - Genus 3 generic case (expensive): 0.183s vs 15.6s (85x faster!)
 
 - **General curves**: Performance competitive with Sage
-  - Trigonal genus-3: genera 2.5s vs Sage 2.6s (comparable)
-  - Klein quartic: genera slower (1.9s vs 0.9s) - possible optimization target
-  - Kovalevskaya: genera much slower (11.3s vs 3.4s) - uses user-supplied basis
+  - Trigonal genus-3: generapy 2.5s vs Sage 2.6s (comparable)
+  - Klein quartic: generapy slower (1.9s vs 0.9s) - possible optimization target
+  - Kovalevskaya: generapy much slower (11.3s vs 3.4s) - uses user-supplied basis
 
 **Accuracy**: All test cases passed accuracy validation at both 30 and 50 digit precision
 
 **Hyperelliptic periods isolated benchmark (hyperelliptic_vs_sage.md):**
-- Genus 1, 30 digits: 10ms (genera) vs 110ms (Sage) - 11x faster
-- Genus 2, 30 digits: 63ms (genera) vs 539ms (Sage) - 8.5x faster
-- vs abelfunctions (fixed 15-digit precision): genera 18-55x faster
+- Genus 1, 30 digits: 10ms (generapy) vs 110ms (Sage) - 11x faster
+- Genus 2, 30 digits: 63ms (generapy) vs 539ms (Sage) - 8.5x faster
+- vs abelfunctions (fixed 15-digit precision): generapy 18-55x faster
 
 **Riemann theta vs jtheta (rtheta_vs_jtheta.md):**
-- Warmed steady-state: genera competitive with jtheta (0.67-1.24x ratio at 50 dps)
-- Cold start: genera slower (5-18x slower) due to Python overhead vs C implementation
-- Accuracy: Maximum scaled error < 1e-98 at 100 digits
-- Note: jtheta is a specialized genus-1 C library; genera is pure Python and handles arbitrary genus
+- Geometric-mean `rtheta / jtheta` time ratios: 1.32x warm and 8.59x cold at 50 dps; 1.23x warm and 7.66x cold at 100 dps. Ratios above one mean `rtheta` was slower.
+- Accuracy: Maximum scaled error was 1.4922e-98 at 100 digits.
+- `jtheta` is mpmath's specialized genus-one implementation, written in Python. Generapy's Riemann theta evaluator supports arbitrary genus. The timing report does not establish the cause of the cold-start difference.
 
 **Riemann theta vs Wolfram Engine (rtheta_vs_wolfram.md):**
-- Overall geometric mean: genera 0.40x (2.5x faster than Wolfram)
-- Unreduced cases: genera 0.03-0.16x (up to 33x faster!) - Wolfram struggles with unreduced tau
-- Regular cases: genera competitive to slightly slower (0.55-1.23x)
+- Overall geometric mean: generapy 0.40x (2.5x faster than Wolfram)
+- Unreduced cases: generapy 0.03-0.16x (up to 33x faster!) - Wolfram struggles with unreduced tau
+- Regular cases: generapy competitive to slightly slower (0.55-1.23x)
 - Genus 1, 50 digits: 0.26ms vs 0.40ms (1.5x faster)
 - Genus 3 unreduced, 100 digits: 29ms vs 1028ms (35x faster!)
 - Accuracy: Maximum scaled error < 6.3e-50 at 50 digits, < 2.7e-100 at 100 digits
@@ -164,7 +172,7 @@ Results tracking:
 **Improvement**: 2.1x speedup for genus-3 cases at 50 digits
 **Details**:
 
-Optimized the derivative radius selection algorithm in src/genera/curves/_radius.py.
+Optimized the derivative radius selection algorithm in src/generapy/curves/_radius.py.
 The new approach reduces the number of terms in the theta series expansion by ~40%
 for high-genus cases, with minimal impact on low-genus performance.
 
