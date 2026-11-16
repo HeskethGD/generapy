@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-16
+
 ### Summary
 
 Generapy now exposes Baker–Akhiezer values and ordinary directional derivatives
@@ -41,6 +43,7 @@ and this changelog is displayed in the documentation.
 
 ### Changed
 
+- Configure canonical documentation URLs from Read the Docs build settings.
 - Refocus the README on installation, usage and feedback, with separate
   contributor and release guides. Document AI-first development and welcome
   issue, discussion and citation feedback.
@@ -116,4 +119,6 @@ This is an experimental research release providing arbitrary-precision computati
 - Abelian function evaluation at arbitrary argument vectors
 - Integration with mpmath for arbitrary-precision numerics
 
+[Unreleased]: https://github.com/HeskethGD/generapy/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/HeskethGD/generapy/releases/tag/v0.2.0
 [0.1.0]: https://github.com/HeskethGD/generapy/releases/tag/v0.1.0

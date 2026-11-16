@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import sys
 
@@ -23,6 +24,7 @@ html_theme = "furo"
 html_static_path = ["_static"]
 html_logo = "_static/generapy-logo.png"
 html_title = "Generapy documentation"
+html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
 # Teal, mint, and gold sampled from the logo; keep backgrounds close to
 # Furo's defaults so mathematical text and code remain easy to read.
 html_theme_options = {
