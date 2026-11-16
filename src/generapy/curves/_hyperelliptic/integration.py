@@ -1,6 +1,6 @@
 """Specialized quadrature for Baker-marked hyperelliptic curves."""
 
-from .model import _infinity_direction
+from .model import _infinity_direction, _second_kind_terms
 
 
 def _real_branch_integrals(ctx, roots, leading, interval, count):
@@ -301,8 +301,6 @@ def _second_kind_interval(ctx, coefficients, monomials, row, genus):
     """Combine monomial integrals into one canonical second-kind integral."""
     # BEL (1.3), with j = row + 1. The caller supplies coefficients through
     # degree 2*g+2, padding that coefficient with zero in odd degree.
-    j = row + 1
     return ctx.fsum(
-        (power + 1 - j) * coefficients[power + 1 + j]
-        * monomials[power] / 4
-        for power in range(j, 2 * genus + 2 - j))
+        coefficient * monomials[power] / 4
+        for power, coefficient in _second_kind_terms(coefficients, row, genus))

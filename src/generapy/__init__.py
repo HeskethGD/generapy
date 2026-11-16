@@ -1,7 +1,7 @@
 """Numerical algebraic curves and Abelian functions."""
 
 from .curves import (
-    Curve, CurveBranchLocus, CurveChart, CurveCheck, CurvePeriodsKind1,
+    Curve, CurveBranchLocus, CurveChart, CurveCheck, CurveDifferentials, CurvePeriodsKind1,
     CurveGenus, CurveHomology, CurveIntegral, CurveLatticeReduction,
     CurveMonodromy, CurvePath, CurvePlace, CurveRiemannConstant,
     CurveAbelMapKind1, CurveAbelMapKind2, CurvePeriodsKind2, CurveValidation,
@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover - generated in builds by setuptools-scm
     __version__ = "0+unknown"
 
 __all__ = [
-    "Curve", "CurveBranchLocus", "CurveChart", "CurveCheck",
+    "Curve", "CurveBranchLocus", "CurveChart", "CurveCheck", "CurveDifferentials",
     "CurvePeriodsKind1", "CurveGenus", "CurveHomology", "CurveIntegral",
     "CurveLatticeReduction", "CurveMonodromy", "CurvePath", "CurvePlace",
     "CurveRiemannConstant", "CurveAbelMapKind1", "CurveAbelMapKind2", "CurvePeriodsKind2",

@@ -12,6 +12,7 @@ Generapy now exposes Baker–Akhiezer values and ordinary directional derivative
 with hyperelliptic spectral and reference normalizations, with worked numerical
 examples. Directional theta and sigma jets avoid constructing full derivative
 tensors, and theta reduction selection accounts for derivative work.
+Resolved differential bases support integration along chosen finite paths.
 First- and second-kind Abel maps use consistent branch choices,
 chart continuation preserves sheets more reliably, and repeated integrations reuse numerical
 setup. Developer and release instructions have moved into dedicated guides,
@@ -19,6 +20,13 @@ and this changelog is displayed in the documentation.
 
 ### Added
 
+- `Curve.resolved_differentials_kind_1()` and
+  `Curve.resolved_differentials_kind_2()` return callable bases with a
+  `CurveDifferentials` metadata record for explicit path integration.
+  Automatic forms include numerical polynomial descriptions in original
+  curve coordinates, including completed-square shifts; supplied callables
+  remain distinguishable and the existing supplied-basis properties retain
+  their meaning.
 - `rtheta_directional_jet` and `kleinian_sigma_directional_jet` evaluate
   ordinary derivatives along a supplied real or complex direction, including
   through theta period reduction.

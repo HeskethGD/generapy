@@ -61,6 +61,9 @@ the coordinate conventions needed when using their results together.
    * - ``periods_kind_2``
      - ``CurvePeriodsKind2``
      - ``eta``, ``eta_prime``, and ``kappa``
+   * - ``resolved_differentials_kind_1`` / ``resolved_differentials_kind_2``
+     - ``CurveDifferentials``
+     - Ordered callable coefficients of ``dx`` in original curve coordinates
    * - ``riemann_matrix``
      - Matrix
      - Normalized period matrix ``tau``
@@ -155,6 +158,52 @@ computed without supplying differential callables::
 ``periods_kind_2()`` and ``abel_map_kind_2()`` require compatible forms bound
 through ``differentials_kind_2``. Without them, these methods raise an error.
 First-kind calculations do not require them.
+
+Resolved differential bases
+"""""""""""""""""""""""""""
+
+The resolved-basis methods return callables and metadata for the forms used
+by period and Abel calculations. Use them to integrate the automatic basis
+on a chosen finite path::
+
+   >>> from mpmath import mp
+   >>> from generapy import Curve
+   >>> ctx = mp.clone()
+   >>> ctx.dps = 25
+   >>> curve = Curve({(0, 2): 1, (5, 0): -4, (3, 0): 20, (1, 0): -16}, ctx=ctx)
+   >>> def point(x):
+   ...     return x, 2*ctx.sqrt(x*(x*x-1)*(x*x-4))
+   >>> start, end = point(ctx.mpf(3)), point(ctx.mpf('3.1'))
+   >>> path = curve.path(start, end)
+   >>> basis = curve.resolved_differentials_kind_1()
+   >>> basis.source, basis.marking, basis.coordinates
+   ('automatic', 'baker', 'original')
+   >>> values = curve.integral(basis.forms, path).values
+   >>> abel = curve.abel_map_kind_1(end, base_place=start, reduce=False).value
+   >>> ctx.norm(ctx.matrix(values)-abel) < 1000*ctx.eps
+   True
+
+The callables accept the original ``(x, y)`` coordinates, including when the
+hyperelliptic engine completes the square internally. Automatic first-kind
+forms are ordered monomials divided by the completed-square coordinate;
+automatic second-kind forms use the compatible BEL numerators. The returned
+second-kind forms integrate to ``dr``; their half-periods carry the minus
+sign described under Conventions above.
+
+The immutable record also includes the engine, kind and resolution precision
+in bits. Automatic bases provide numerical sparse polynomial ``numerators``
+and a common ``denominator`` as tuples of ``(x_power, y_power, coefficient)``
+terms. For opaque supplied callables, both descriptions are ``None`` and
+``source`` is ``'supplied'``. Automatic forms use the Curve's context; resolve
+again after changing its precision. Supplied callables are returned unchanged.
+The existing ``differentials_kind_1`` and
+``differentials_kind_2`` properties still describe supplied bases only.
+
+.. autoclass:: generapy.CurveDifferentials
+
+.. automethod:: generapy.Curve.resolved_differentials_kind_1
+
+.. automethod:: generapy.Curve.resolved_differentials_kind_2
 
 .. _custom-differential-bases:
 
@@ -400,7 +449,7 @@ Validation and result records
 .. automethod:: generapy.Curve.validate
 
 The record classes ``CurveBranchLocus``, ``CurveMonodromy``, ``CurveGenus``,
-``CurveHomology``, ``CurvePeriodsKind1``, ``CurvePeriodsKind2``,
+``CurveHomology``, ``CurvePeriodsKind1``, ``CurvePeriodsKind2``, ``CurveDifferentials``,
 ``CurveRiemannConstant``, ``CurveAbelMapKind1``, ``CurveAbelMapKind2``,
 ``CurveChart``,
 ``CurvePlace``, ``CurvePath``, ``CurveIntegral``, ``CurveLatticeReduction``,
