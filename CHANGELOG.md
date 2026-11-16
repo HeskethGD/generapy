@@ -17,6 +17,9 @@ and this changelog is displayed in the documentation.
 
 ### Added
 
+- `rtheta_directional_jet` and `kleinian_sigma_directional_jet` evaluate
+  ordinary derivatives along a supplied real or complex direction, including
+  through theta period reduction.
 - Public `baker_akhiezer` evaluator with hyperelliptic spectral normalization
   and reference normalization. Accepts a `Curve` or sparse polynomial mapping
   with a spectral `point`, or compatible explicit `shift`, second-kind and
@@ -36,6 +39,8 @@ and this changelog is displayed in the documentation.
 
 ### Performance
 
+- BA directional jets use direct theta/sigma directional evaluation without
+  constructing the full mixed-derivative tensor. The BA interface is unchanged.
 - Reuse evaluated theta values and derivative jets for identical requests in
   bounded, context- and precision-aware caches. Large jets bypass retention.
 - Reuse immutable Gauss rules across repeated path and chart integrations,

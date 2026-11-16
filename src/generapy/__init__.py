@@ -8,9 +8,9 @@ from .curves import (
 )
 from .kleinian import (
     baker_akhiezer, baker_akhiezer_jet, kleinian_p, kleinian_sigma, kleinian_sigma_jet,
-    kleinian_sigma_normalization, kleinian_zeta,
+    kleinian_sigma_directional_jet, kleinian_sigma_normalization, kleinian_zeta,
 )
-from .riemann_theta import rtheta, rtheta_jet
+from .riemann_theta import rtheta, rtheta_directional_jet, rtheta_jet
 
 try:
     from ._version import version as __version__
@@ -23,6 +23,6 @@ __all__ = [
     "CurveLatticeReduction", "CurveMonodromy", "CurvePath", "CurvePlace",
     "CurveRiemannConstant", "CurveAbelMapKind1", "CurveAbelMapKind2", "CurvePeriodsKind2",
     "CurveValidation", "baker_akhiezer", "baker_akhiezer_jet", "kleinian_p", "kleinian_sigma",
-    "kleinian_sigma_jet", "kleinian_sigma_normalization", "kleinian_zeta",
-    "rtheta", "rtheta_jet",
+    "kleinian_sigma_jet", "kleinian_sigma_directional_jet", "kleinian_sigma_normalization", "kleinian_zeta",
+    "rtheta", "rtheta_directional_jet", "rtheta_jet",
 ]

@@ -5,7 +5,8 @@ from ._context import _context_state, ctx_lru_cache, resolve_context
 from .curves import Curve
 from .riemann_theta import (
     _as_vector, _matrix_tuple, _multiindices, _normalise_characteristic,
-    _normalise_tau, _rtheta_tau_data, rtheta_jet,
+    _normalise_tau, _quadratic_directional_jet, _rtheta_tau_data,
+    rtheta_directional_jet, rtheta_jet,
 )
 
 
@@ -597,16 +598,10 @@ def baker_akhiezer_jet(u, shift=None, second_kind=None, omega=None,
 
 def _sigma_directional_jet(ctx, argument, direction, order, omega, tau,
                             kappa, characteristic, normalization):
-    """Contract ordinary mixed sigma derivatives into one flow direction."""
-    jet = kleinian_sigma_jet(argument, omega, tau, kappa, order, characteristic,
-                              normalization=normalization, ctx=ctx)
-    result = []
-    for n in range(order+1):
-        result.append(ctx.fsum(
-            (math.factorial(n) // math.prod(math.factorial(k) for k in index))
-            * ctx.fprod(d**k for d, k in zip(direction, index)) * value
-            for index, value in jet.items() if sum(index) == n))
-    return tuple(result)
+    """Use the direct directional primitive for BA numerator and denominator."""
+    return kleinian_sigma_directional_jet(
+        argument, omega, tau, kappa, order, characteristic, normalization,
+        direction=direction, ctx=ctx)
 
 
 def _baker_akhiezer_evaluate(u, shift, second_kind, omega, tau, kappa,
@@ -753,6 +748,45 @@ def kleinian_sigma_jet(u, omega=None, tau=None, kappa=None, order=None,
                     * theta_derivatives[complement])
             result[index] = constant * ctx.fsum(terms)
     return {index: +value for index, value in result.items()}
+
+
+def kleinian_sigma_directional_jet(u, omega=None, tau=None, kappa=None, order=None,
+                                    characteristic=None, normalization=None, *,
+                                    direction, curve=None, ctx=None):
+    r"""Return ordinary sigma derivatives along one Abelian direction.
+
+    The tuple contains derivatives of :math:`\sigma(u+t d)` at :math:`t=0`,
+    including the value and all orders through ``order``. ``direction=d``
+    uses the same unnormalized Abelian coordinates as ``u``. Real and complex
+    directions are accepted. Entries are derivatives, not Taylor coefficients.
+
+    Curve inputs, periods, characteristic and normalization follow
+    :func:`kleinian_sigma`. The full mixed-derivative jet remains available
+    as :func:`kleinian_sigma_jet`.
+    """
+    ctx, omega, tau, kappa, characteristic, normalization = _resolve_kleinian_inputs(
+        omega, tau, kappa, characteristic, curve, ctx, normalization)
+    if not isinstance(order, int) or isinstance(order, bool) or order < 0:
+        raise ValueError("order must be a nonnegative integer")
+    with ctx.extraprec(10):
+        u, inverse, tau_key, kappa, characteristic = _prepare_kleinian_data(
+            ctx, u, omega, tau, kappa, characteristic)
+        direction = _as_vector(ctx, direction, "direction", len(u))
+        theta_u = inverse*ctx.matrix(u)
+        theta_direction = inverse*ctx.matrix(direction)
+        theta = rtheta_directional_jet(
+            theta_u, tau_key, theta_direction, order, characteristic, ctx=ctx)
+        linear = ctx.fsum(direction[i]*kappa[i, j]*u[j]
+                          for i in range(len(u)) for j in range(len(u)))
+        quadratic = ctx.fsum(direction[i]*kappa[i, j]*direction[j]
+                             for i in range(len(u)) for j in range(len(u)))/2
+        exponential = _quadratic_directional_jet(ctx, linear, quadratic, order)
+        factor = kleinian_sigma_normalization(
+            omega, tau_key, characteristic, normalization, ctx=ctx) * ctx.exp(
+                ctx.fsum(u[i]*kappa[i, j]*u[j] for i in range(len(u)) for j in range(len(u)))/2)
+        result = tuple(factor*ctx.fsum(math.comb(n, k)*exponential[n-k]*theta[k]
+                                      for k in range(n+1)) for n in range(order+1))
+    return tuple(+v for v in result)
 
 
 def kleinian_zeta(u, omega=None, tau=None, kappa=None, characteristic=None, *,

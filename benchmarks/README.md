@@ -18,6 +18,19 @@ benchmarks/
 
 ## Prerequisites
 
+For directional derivatives and direct/reduced path comparisons, run:
+
+```sh
+python -m benchmarks.rtheta.benchmark_directional_jets --dps 24 40
+```
+
+This reuses the existing coupled/unreduced theta fixtures, adds the issue #17
+matrix and genus-four/five controls, and compares full contractions with direct
+directional theta, sigma and BA jets. Result caches are cleared before timing
+each evaluation while curve-independent setup remains warm. Use `--cases`,
+`--workloads` and `--repeats` for bounded runs; `--output` saves an experimental
+JSON report. All derivatives are checked for agreement alongside their timings.
+
 To measure the evaluated theta-result cache on repeated and moving arguments,
 and sigma/BA jets sharing a denominator across four shifts, run:
 
