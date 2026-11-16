@@ -22,6 +22,68 @@ Each entry should include:
 
 <!-- Entries will be added as releases occur and optimizations are made -->
 
+### Development: directional jets and derivative-aware reduction (2026-11-16)
+
+**Benchmark:** `python -m benchmarks.rtheta.benchmark_directional_jets`
+
+**Status:** Experimental local measurements from development working trees,
+not a release baseline. Runs used
+Python 3.14.7, mpmath 1.4.1 and macOS 27.0.1 on arm64, at 24 and 40 decimal
+digits. Reported timings are medians of two measured calls after a warm-up.
+Evaluated-result caches were cleared before every timed call; period and
+truncation setup stayed warm. All returned derivatives were checked alongside
+timing. Raw JSON remains untracked.
+
+Direct directional theta/sigma jets accumulate orders zero through three
+without constructing all mixed partials. BA uses this path internally, with
+the same public interface. The paired full-jet comparison contracts the mixed
+jet to the same direction; BA compares four reference-normalized shifts,
+retaining shared-denominator reuse within each sample in both implementations.
+
+The following speedup ranges cover both coordinate and dense directions at
+both precisions, using automatic path selection in each implementation:
+
+| Fixture | Sigma: full / directional | BA: full / directional |
+| --- | ---: | ---: |
+| Genus 2 coupled | 1.46–1.64× | 1.35–1.43× |
+| Genus 3 coupled | 1.99–2.33× | 1.78–1.97× |
+| Issue #17 | 1.50–2.11× | 1.36–1.69× |
+| Genus 4 coupled | 3.01–3.70× | 2.42–2.92× |
+| Genus 5 coupled | 3.19–3.99× | 2.61–3.12× |
+
+These are supplied period-data workloads, including synthetic genus-four/five
+controls, rather than end-to-end curve computations. The issue #17 fixture is
+copied from its standalone reproducer. Sigma and BA use explicit compatible
+periods with `omega = I/2` and `kappa = I/10`.
+
+Reduction selection now estimates derivative lattice radii, argument shifts,
+transformed output work and composition cost. On #17, the order-three full
+jet switches to reduction: approximately 0.134–0.136 s becomes 0.090–0.094 s
+at 24 digits, and 0.233–0.237 s becomes 0.135–0.136 s at 40 digits. The
+coordinate directional jet also selects reduction; the dense direction stays
+direct because reduction makes its direction complex and costs more. The
+coupled and strongly unreduced controls retain their existing path choices.
+Their measured times mostly differ by single-digit percentages; one short
+directional sample differed by 17%, so these runs do not establish a universal
+speedup or a strict regression bound.
+
+Reproduce the bounded comparisons from the repository root:
+
+```sh
+python -m benchmarks.rtheta.benchmark_directional_jets --dps 24 40 \
+  --cases issue17 g2-coupled g3-coupled g2-unreduced g3-unreduced \
+  --workloads theta --repeats 2 --output /tmp/directional-theta.json
+python -m benchmarks.rtheta.benchmark_directional_jets --dps 24 40 \
+  --cases g2-coupled g3-coupled issue17 g4-coupled g5-coupled \
+  --workloads sigma ba --repeats 2 --output /tmp/directional-sigma-ba.json
+```
+
+The theta comparison includes forced direct/reduced evaluations as well as
+automatic selection. Regression tests compare all twenty #17 mixed partials
+at both precisions, including a shifted argument, and compare directional
+jets against full contractions, reduced paths and genus-one `jtheta` values.
+No tail criterion was relaxed to obtain the timing changes.
+
 ### v0.1.0: Initial baseline (2026-10-01)
 
 **Baselines:**

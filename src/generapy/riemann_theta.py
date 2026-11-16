@@ -645,12 +645,12 @@ def _compose_reduced_derivative(ctx, derivatives, values, factor, jacobian,
 
 
 def _rtheta_reduced_derivatives(ctx, z, tau_key, a, b, requested,
-                                operations, reduced_key):
+                                operations, reduced_key, prepared=None):
     """Evaluate requested derivatives after one modular transformation."""
     genus = len(z)
     degree = max(sum(derivative) for derivative in requested)
-    transformed, factor, jacobian, exponent = _reduced_jet_data(
-        ctx, z, tau_key, a, b, operations, reduced_key)
+    transformed, factor, jacobian, exponent = (prepared if prepared is not None else
+        _reduced_jet_data(ctx, z, tau_key, a, b, operations, reduced_key))
     derivatives = tuple(_multiindices(genus, degree))
     zeros = (ctx.zero,) * genus
     values = _rtheta_sum(
@@ -872,17 +872,65 @@ def _rtheta_sum(ctx, z, tau_key, a, b, derivatives, tau_data=None, direction=Non
 # -----------------------------------------
 
 def _derivative_reduction_threshold(ctx, genus, degree, derivatives):
-    """Estimate the point-count saving needed to reduce derivatives."""
+    """Relative per-point work of reduced and requested mixed derivatives."""
     transformed_count = ctx.binomial(genus + degree, degree)
     requested_count = len(set(derivatives))
-    # Quadratic-form and exponential evaluation is shared by every output and
-    # costs at least as much as several derivative accumulations. Model that
-    # common work as ``genus`` output-equivalents instead of charging the full
-    # lattice traversal once for every member of the transformed jet. A larger
-    # saving factor selects reduction less often.
-    reduction_saving_factor = 4
-    return (reduction_saving_factor * (genus + transformed_count)
-            / (genus + requested_count))
+    return (genus + transformed_count)/(genus + requested_count)
+
+
+def _rtheta_lattice_points(ctx, z, tau_key, degrees, direction=None, extra=0):
+    """Estimate derivative lattice volume with the actual radius and shift bound."""
+    degree = max(degrees)
+    if direction is not None:
+        norm = ctx.sqrt(ctx.fsum(abs(d)**2 for d in direction))
+        extra += degree*max(0, ctx.mag(norm))
+    with ctx.extraprec(extra):
+        data = _rtheta_tau_data(ctx, tau_key)
+        if not degree:
+            return data[6]
+        shift = ctx.lu_solve(ctx.matrix(data[1]), ctx.matrix([ctx.im(v) for v in z]))
+        bound = _shift_norm_bucket(ctx, ctx.norm(shift))
+        radius = _rtheta_derivative_radius(ctx, len(z), degrees, data[4], data[3], bound)
+        points = data[6]*(radius/data[5])**len(z)
+    return +points
+
+
+def _rtheta_reduction_costs(ctx, z, tau_key, reduced_key, prepared,
+                            derivatives=None, direction=None, order=None):
+    """Compare lattice work plus composition, without changing tail criteria."""
+    genus = len(z)
+    transformed = prepared[0]
+    if direction is None:
+        degree = max(sum(d) for d in derivatives)
+        requested = len(set(derivatives))
+        transformed_count = int(ctx.binomial(genus+degree, degree))
+        direct_points = _rtheta_lattice_points(ctx, z, tau_key, tuple(sorted({sum(d) for d in derivatives})))
+        reduced_points = _rtheta_lattice_points(ctx, transformed, reduced_key, tuple(range(degree+1)))
+        direct_cost = direct_points*(genus+requested)
+        reduced_cost = (reduced_points*(genus+requested)
+                        * _derivative_reduction_threshold(ctx, genus, degree, derivatives))
+        # Mixed-jet composition combines transformed components for each
+        # requested output. Unlike a directional jet it grows with tensor size.
+        reduced_cost += genus*degree*requested*transformed_count
+    else:
+        _, _, transformed_direction, _, _, extra = _directional_reduced_parameters(
+            ctx, prepared, direction, order)
+        degrees = tuple(range(order+1))
+        direct_points = _rtheta_lattice_points(ctx, z, tau_key, degrees, direction)
+        reduced_points = _rtheta_lattice_points(ctx, transformed, reduced_key, degrees, transformed_direction, extra)
+        # A real direction can become complex after reduction. Accumulating
+        # complex powers requires more multiplications than real weights.
+        direct_weight = 2 if any(ctx.im(d) for d in direction) else 1
+        reduced_weight = 2 if any(ctx.im(d) for d in transformed_direction) else 1
+        direct_cost = direct_points*(genus+(order+1)*direct_weight)
+        reduced_cost = reduced_points*(genus+(order+1)*reduced_weight) + (order+1)**2 + genus**2
+    return direct_cost, reduced_cost
+
+
+def _rtheta_prefer_reduction(ctx, direct_cost, reduced_cost):
+    # Avoid switching paths for marginal estimated savings. Timings remain
+    # heuristic; this margin affects selection, never numerical truncation.
+    return direct_cost > ctx.mpf('1.15')*reduced_cost
 
 
 def _rtheta_normalized_derivatives(ctx, z, tau_key, a, b, derivatives):
@@ -913,6 +961,7 @@ def _rtheta_evaluate(ctx, z, tau_key, a, b, derivatives):
              + input_guard_bits * max(0, input_magnitude))
     with ctx.extraprec(extra):
         use_reduction = False
+        prepared = None
         reduced_key = tau_key
         operations = ()
         tau_data = _rtheta_tau_data(ctx, tau_key)
@@ -931,17 +980,22 @@ def _rtheta_evaluate(ctx, z, tau_key, a, b, derivatives):
             reduced_key, operations, reduced_points = (
                 _rtheta_reduction_data(ctx, tau_key))
             if max_degree:
-                required_saving = _derivative_reduction_threshold(
-                    ctx, genus, max_degree, derivatives)
+                relative_work = _derivative_reduction_threshold(ctx, genus, max_degree, derivatives)
+                # Preserve the cheap, established decision for large savings.
+                # Spend on derivative geometry only for borderline candidates.
+                use_reduction = direct_points/reduced_points > 4*relative_work
+                if not use_reduction:
+                    prepared = _reduced_jet_data(ctx, z, tau_key, a, b, operations, reduced_key)
+                    costs = _rtheta_reduction_costs(
+                        ctx, z, tau_key, reduced_key, prepared, derivatives=derivatives)
+                    use_reduction = _rtheta_prefer_reduction(ctx, *costs)
             else:
-                required_saving = value_reduction_saving
-            use_reduction = (direct_points / reduced_points
-                             > required_saving)
+                use_reduction = direct_points/reduced_points > value_reduction_saving
         if use_reduction:
             if max_degree:
                 results = _rtheta_reduced_derivatives(
                     ctx, z, tau_key, a, b, derivatives,
-                    operations, reduced_key)
+                    operations, reduced_key, prepared=prepared)
             else:
                 transformed_z, characteristic_factor = (
                     _zero_characteristic_form(ctx, z, tau_key, a, b))
@@ -1191,11 +1245,9 @@ def _rtheta_directional_sum(ctx, z, tau_key, a, b, direction, order):
     return tuple(+v for v in result)
 
 
-def _rtheta_directional_reduced(ctx, z, tau_key, a, b, direction, order,
-                                 operations, reduced_key):
-    """Transform one direction and its quadratic modular prefactor."""
-    transformed, factor, jacobian, exponent = _reduced_jet_data(
-        ctx, z, tau_key, a, b, operations, reduced_key)
+def _directional_reduced_parameters(ctx, prepared, direction, order):
+    """Contract the modular map and its prefactor to a univariate flow."""
+    transformed, factor, jacobian, exponent = prepared
     transformed_direction = tuple(ctx.fsum(v*d for v, d in zip(row, direction))
                                   for row in jacobian)
     coefficients = [ctx.zero, ctx.zero]
@@ -1205,6 +1257,16 @@ def _rtheta_directional_reduced(ctx, z, tau_key, a, b, direction, order,
     # Reserve bits for the univariate prefactor's derivative coefficients.
     growth = abs(linear) + ctx.sqrt(abs(quadratic))
     extra = order*max(0, ctx.mag(growth)) + math.factorial(order).bit_length() + 2*order
+    return transformed, factor, transformed_direction, linear, quadratic, extra
+
+
+def _rtheta_directional_reduced(ctx, z, tau_key, a, b, direction, order,
+                                 operations, reduced_key, prepared=None):
+    """Transform one direction and its quadratic modular prefactor."""
+    if prepared is None:
+        prepared = _reduced_jet_data(ctx, z, tau_key, a, b, operations, reduced_key)
+    transformed, factor, transformed_direction, linear, quadratic, extra = (
+        _directional_reduced_parameters(ctx, prepared, direction, order))
     with ctx.extraprec(extra):
         zeros = (ctx.zero,)*len(z)
         values = _rtheta_directional_sum(
@@ -1213,11 +1275,6 @@ def _rtheta_directional_reduced(ctx, z, tau_key, a, b, direction, order,
         result = tuple(factor*ctx.fsum(math.comb(n, k)*prefactor[n-k]*values[k]
                                       for k in range(n+1)) for n in range(order+1))
     return tuple(+v for v in result)
-
-
-def _directional_reduction_threshold(ctx, genus, order):
-    """Initial point-saving threshold for a univariate directional jet."""
-    return 4
 
 
 @ctx_lru_cache(maxsize=32)
@@ -1235,12 +1292,18 @@ def _rtheta_directional_evaluate(ctx, z, tau_key, a, b, direction, order):
         data = _rtheta_tau_data(ctx, tau_key)
         reduced_key, operations = tau_key, ()
         use_reduction = False
+        prepared = None
         if data[6] > 32 and data[4] < ctx.mpf('.9'):
-            reduced_key, operations, points = _rtheta_reduction_data(ctx, tau_key)
-            use_reduction = data[6]/points > _directional_reduction_threshold(ctx, len(z), order)
+            reduced_key, operations, reduced_points = _rtheta_reduction_data(ctx, tau_key)
+            use_reduction = data[6]/reduced_points > 4
+            if not use_reduction:
+                prepared = _reduced_jet_data(ctx, z, tau_key, a, b, operations, reduced_key)
+                costs = _rtheta_reduction_costs(
+                    ctx, z, tau_key, reduced_key, prepared, direction=direction, order=order)
+                use_reduction = _rtheta_prefer_reduction(ctx, *costs)
         if use_reduction:
             result = _rtheta_directional_reduced(
-                ctx, z, tau_key, a, b, direction, order, operations, reduced_key)
+                ctx, z, tau_key, a, b, direction, order, operations, reduced_key, prepared=prepared)
         else:
             result = _rtheta_directional_sum(ctx, z, tau_key, a, b, direction, order)
     return tuple(+v for v in result)
