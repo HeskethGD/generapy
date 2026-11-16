@@ -18,6 +18,30 @@ benchmarks/
 
 ## Prerequisites
 
+To check changes against a previous Generapy revision without external tools:
+
+```sh
+python -m benchmarks.benchmark_generapy_revisions --before main --after HEAD \
+  --output /tmp/generapy-revisions.json
+```
+
+This archives both committed source trees into temporary directories and runs
+them in isolated processes using the same Python and mpmath. It reuses the
+historical genus-one and higher-genus theta inputs and all curve-period cases,
+plus mixed-jet and BA controls. Result caches are cleared during numerical
+timing; period setup is warm except in the explicit cold genus-one workloads.
+Curve trials use fresh processes and the existing period worker. Every output
+is compared across revisions, and curve validation must pass. No other
+mathematics tools are launched. Seven samples are collected per numerical
+workload and three per curve/revision by default; the complete run can take
+several minutes.
+
+Use `--groups`, `--filter`, `--repeats` and `--curve-repeats` for bounded runs,
+or `--reverse-order` to reverse which revision runs first in each alternating
+pair. Output paths must be new. Raw reports are experimental; use their matched
+revision timings to assess a PR, rather than attributing differences from old
+release reports to one change across different Python versions.
+
 For directional derivatives and direct/reduced path comparisons, run:
 
 ```sh
