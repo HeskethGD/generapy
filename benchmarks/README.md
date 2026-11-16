@@ -20,6 +20,8 @@ benchmarks/
 
 The [v0.2.0 pre-release record](baselines/v0.2.0/README.md) contains matched
 Generapy revision comparisons and context against the saved v0.1.0 timings.
+The [integration follow-up](baselines/v0.2.0/integration.md) records the later
+chart and finite-base Abel profiling and optimizations for issues #9/#10.
 
 To check changes against a previous Generapy revision without external tools:
 

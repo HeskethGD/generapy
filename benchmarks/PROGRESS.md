@@ -22,6 +22,36 @@ Each entry should include:
 
 <!-- Entries will be added as releases occur and optimizations are made -->
 
+### v0.2.0 pre-release: shared integration work for #9/#10 (2026-11-16)
+
+**Report:** [complete integration results and protocol](baselines/v0.2.0/integration.md).
+
+Compared main after PR #24 (`c02262c`) with `ac5ae8d`, including chart
+optimization `483535a` and Abel optimization `66e51fe`. The jet changes did
+not address these integration costs. Profiling showed repeated coordinate
+validation across chart forms and repeated continued square-root products
+across Abel components.
+
+Chart conversion and ambient residual/scale terms are now shared per node.
+Hyperelliptic branch factors are shared at common quadrature nodes within a
+single path evaluation, with precision included in reuse. Componentwise
+adaptive quadrature, marked paths and branch checks are retained.
+
+At 40 digits, chart integration fell from 0.155 s to 0.119 s, real finite-base
+Abel integration from 0.0203 s to 0.0108 s and complex finite-base Abel
+integration from 0.0842 s to 0.0469 s. Across 20/40/80 digits, the chart
+fixture improves about 23–24%, complex Abel about 44%, and genus-three Abel
+controls about 2.6–2.8x. Genus-one controls also improve slightly. Remaining
+chart correction/validation and two marked Abel paths still cost more than
+specialized direct quadrature; these are partial performance improvements.
+
+All 33 local-integral and 21 chart-control combinations passed on both
+sources; errors and chart segment/refinement counts match before/after.
+196 focused tests passed and changed numerical lines have complete diff
+coverage. Final timings used committed candidate sources and a clean tracked
+tree; raw samples remain untracked. This is a later pre-release checkpoint,
+not a replacement for the earlier theta/BA measurements below.
+
 ### v0.2.0 pre-release: matched Generapy regression checks (2026-11-16)
 
 **Reports:** [overview and protocol](baselines/v0.2.0/README.md),
