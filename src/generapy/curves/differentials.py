@@ -5,6 +5,17 @@ from math import gcd
 from .polynomial import _polynomial_gcd
 
 
+def _rational_differential(ctx, numerator, denominator):
+    """Return a coefficient of dx in the original affine coordinates."""
+    def differential(x, y):
+        x, y = ctx.convert(x), ctx.convert(y)
+        top = ctx.fsum(c*x**i*y**j for i, j, c in numerator)
+        bottom = ctx.fsum(c*x**i*y**j for i, j, c in denominator)
+        return top/bottom
+
+    return differential
+
+
 def _cross(origin, left, right):
     """Return the oriented area of three exponent points."""
     return ((left[0] - origin[0]) * (right[1] - origin[1])

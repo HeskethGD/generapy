@@ -13,6 +13,42 @@ from mpmath import mp
 TERMS = {(0, 2): 1, (1, 0): -1}
 
 
+def test_chart_forms_share_coordinate_validation_at_each_node():
+    ctx = mp.clone()
+    ctx.dps = 25
+    terms = {(0, 1): 1, (2, 0): -1}
+    curve = make_curve(ctx, terms)
+    mapped, first, second = [], [], []
+
+    def coordinates(t, w):
+        mapped.append((t, w))
+        return t, w, 1
+
+    def form_x(x, y):
+        first.append((x, y))
+        return x
+
+    def form_y(x, y):
+        second.append((x, y))
+        return y
+
+    result = curve.chart_integral(curve.chart(terms, coordinates),
+                                  (form_x, form_y), (0, 1), 0)
+    assert ctx.almosteq(result.values[0], ctx.mpf(1)/2)
+    assert ctx.almosteq(result.values[1], ctx.mpf(1)/3)
+    assert mapped == first == second
+
+
+def test_shared_chart_evaluation_still_rejects_wrong_ambient_coordinates():
+    ctx = mp.clone()
+    ctx.dps = 25
+    terms = {(0, 1): 1, (2, 0): -1}
+    curve = make_curve(ctx, terms)
+    chart = curve.chart(terms, lambda t, w: (t, w+ctx.mpf('.25'), 1))
+    with pytest.raises(ValueError, match='does not parametrize its ambient curve'):
+        curve.chart_integral(chart, (lambda x, y: x, lambda x, y: y), (0, 1), 0)
+
+
 @pytest.mark.parametrize('digits', [20, 40, 80])
 def test_turning_point_chart_integral_preserves_branch_for_coarse_path(digits):
     """Issue #4: W is positive even though ambient Y changes sign."""

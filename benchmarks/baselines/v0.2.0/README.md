@@ -2,7 +2,7 @@
 
 These are **pre-release v0.2.0 measurements**, not a claim that v0.2.0 has been published.
 
-- Generated: 2026-11-16T01:28:22+00:00
+- Generated: 2026-11-16T12:43:36+00:00
 - Previous main: `6134a3d99152e6948f0aea58948e732a2e8d868b`
 - Candidate: `4f6475f3824461e8c0e8226b6806e8bd17189ad2`
 - Python: 3.14.7; mpmath: 1.4.1
@@ -10,6 +10,7 @@ These are **pre-release v0.2.0 measurements**, not a claim that v0.2.0 has been 
 - Revisions were archived from Git into separate temporary directories and imported in isolated processes. The checkout was not switched.
 - No Sage, Wolfram, FLINT, PARI or external theta implementation was launched.
 
+This page records the theta/BA checkpoint. The later [integration follow-up](integration.md) records issues #9/#10 against main after PR #24, with its own candidate commit.
 ## Matched revision comparison
 
 Lower candidate / previous time ratios are better. One means equal measured time.

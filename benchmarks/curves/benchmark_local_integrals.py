@@ -84,6 +84,33 @@ def complex_case(ctx, Curve):
     }
 
 
+def real_control(ctx, Curve, genus):
+    """Check single-component overhead and sharing beyond genus two."""
+    roots = tuple(map(ctx.mpf, range(-genus, genus+1)))
+    coefficients = [ctx.one]
+    for root in roots:
+        out = [ctx.zero]*(len(coefficients)+1)
+        for i, value in enumerate(coefficients):
+            out[i] -= root*value
+            out[i+1] += value
+        coefficients = out
+    curve = Curve({(0, 2): 1, **{(i, 0): -4*v for i, v in enumerate(coefficients) if v}}, ctx=ctx)
+    branch, target = roots[-1], roots[-1]+1
+    point = target, 2*ctx.sqrt(ctx.fprod(target-r for r in roots))
+
+    def direct():
+        return tuple(ctx.quad(
+            lambda t, k=k: (branch+t*t)**k/ctx.sqrt(
+                ctx.fprod(branch+t*t-r for r in roots[:-1])), [0, 1])
+            for k in range(genus))
+
+    return {
+        'direct': direct,
+        'finite-base-abel': lambda: curve.abel_map_kind_1(
+            point, base_place=(branch, 0), reduce=False).value,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, default=Path(__file__).resolve().parents[2]/'src')
@@ -104,7 +131,10 @@ def main():
 
     rows = []
     for digits in args.digits:
-        for name, factory in (('real-branch', real_case), ('complex-regular', complex_case)):
+        for name, factory in (
+                ('real-branch', real_case), ('complex-regular', complex_case),
+                ('genus-one-control', lambda ctx, Curve: real_control(ctx, Curve, 1)),
+                ('genus-three-control', lambda ctx, Curve: real_control(ctx, Curve, 3))):
             ctx = mp.clone()
             ctx.dps = digits
             methods = factory(ctx, Curve)

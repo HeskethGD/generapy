@@ -3,11 +3,12 @@
 from ._context import _curve_cache_state
 from ._hyperelliptic import _hyperelliptic_abel_map
 from ._hyperelliptic.jacobian import _hyperelliptic_characteristic
-from ._hyperelliptic.model import _normalize_abel_targets
+from ._hyperelliptic.model import _normalize_abel_targets, _second_kind_terms
 from ._hyperelliptic.operations import _hyperelliptic_local_abel_difference
 from ._records import (
     CurveBranchLocus,
     CurveCheck,
+    CurveDifferentials,
     CurvePeriodsKind1,
     CurveGenus,
     CurveHomology,
@@ -41,7 +42,7 @@ from .charts import _validated_chart_coordinate_map
 from .continuation import (
     _lift_plane_curve_path,
 )
-from .differentials import _baker_callable
+from .differentials import _baker_basis, _baker_callable, _rational_differential
 from .integration import (
     _integrate_plane_curve_branch,
     _integrate_plane_curve_path,
@@ -64,6 +65,39 @@ from .polynomial import _ordered_plane_curve_sheets
 
 # Curve operations
 # ----------------
+
+
+def resolved_differentials(ctx, curve, supplied, *, kind):
+    """Resolve a basis without integrating periods, preserving engine dispatch."""
+    prepared, model = _normalize_algebraic_curve_input(ctx, curve)
+    if model is not None:
+        genus = _stage_hyperelliptic_homology(ctx, model.coefficients)
+        engine, marking = 'hyperelliptic', 'baker'
+        denominator = ((0, 1, ctx.one),) + tuple(
+            (i, 0, c) for i, c in enumerate(model.y_shift) if c)
+        if kind == 1:
+            numerators = tuple(((i, 0, ctx.one),) for i in range(genus))
+        else:
+            numerators = tuple(tuple((p, 0, c/4) for p, c in
+                                      _second_kind_terms(model.coefficients, i, genus) if c)
+                               for i in range(genus))
+    else:
+        engine, marking = 'general', 'geometric-polygon'
+        with ctx.extraprec(_GEOMETRIC_GUARD_BITS):
+            graph, _ = _stage_geometric_polygon(ctx, prepared)
+            genus = graph.genus
+            if supplied is None:
+                basis = _baker_basis(ctx, prepared, genus)
+                numerators = tuple(((i, j, ctx.one),) for i, j in basis[0])
+                denominator = basis[1]
+        if supplied is not None:
+            if len(supplied) != genus:
+                raise ValueError(f'differentials_kind_{kind} must contain one form per genus')
+            return CurveDifferentials(supplied, kind, 'supplied', engine, marking,
+                                      'original', ctx.prec, None, None)
+    forms = tuple(_rational_differential(ctx, n, denominator) for n in numerators)
+    return CurveDifferentials(forms, kind, 'automatic', engine, marking,
+                              'original', ctx.prec, numerators, denominator)
 
 
 def _geometric_second_forms(second_kind, second_differentials):

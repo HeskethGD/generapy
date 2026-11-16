@@ -78,6 +78,10 @@ CurvePeriodsKind2 = namedtuple(
     "genus differentials eta eta_prime kappa kappa_symmetry_residual "
     "max_sheet_residual engine marking",
     defaults=(None, None))
+CurveDifferentials = namedtuple(
+    "CurveDifferentials",
+    "forms kind source engine marking coordinates working_precision "
+    "numerators denominator")
 CurveRiemannConstant = namedtuple(
     "CurveRiemannConstant",
     "value characteristic base_place max_sheet_residual engine marking",

@@ -559,7 +559,7 @@ def _pullback_plane_curve_differentials(differentials, coordinate_map):
 
 def _integrate_plane_curve_branch(
         ctx, curve, continuation, differentials, quadrature_order=None,
-        check_convergence=False):
+        check_convergence=False, differential_evaluator=None):
     """Integrate coefficients of ``dt`` along one continued chart branch.
 
     Node corrections are constrained by local sheet separation. Ambiguous
@@ -574,6 +574,9 @@ def _integrate_plane_curve_branch(
     if not differentials or any(not callable(value)
                                 for value in differentials):
         raise ValueError("differentials must be a sequence of callables")
+    if (differential_evaluator is not None
+            and not callable(differential_evaluator)):
+        raise ValueError("differential_evaluator must be callable")
     if len(continuation.path) != len(continuation.values):
         raise ValueError("branch path and values are inconsistent")
     if quadrature_order is None:
@@ -584,12 +587,14 @@ def _integrate_plane_curve_branch(
         raise ValueError("check_convergence must be boolean")
     if check_convergence:
         previous = _integrate_plane_curve_branch(
-            ctx, curve, continuation, differentials, quadrature_order)
+            ctx, curve, continuation, differentials, quadrature_order,
+            differential_evaluator=differential_evaluator)
         residual = previous.max_sheet_residual
         for unused in range(3):
             quadrature_order += 16
             current = _integrate_plane_curve_branch(
-                ctx, curve, continuation, differentials, quadrature_order)
+                ctx, curve, continuation, differentials, quadrature_order,
+                differential_evaluator=differential_evaluator)
             residual = max(residual, current.max_sheet_residual)
             if all(ctx.isfinite(a) and ctx.isfinite(b)
                    and abs(a-b) <= 100*ctx.eps*max(ctx.one, abs(b))
@@ -645,8 +650,14 @@ def _integrate_plane_curve_branch(
                 u = refined.values[refined.path.index(t)]
                 residual = abs(_evaluate_plane_polynomial(ctx, curve, t, u))
             max_sheet_residual = max(max_sheet_residual, residual)
-            for index, differential in enumerate(differentials):
-                contributions[index].append(weight * differential(t, u))
+            sample_values = (tuple(form(t, u) for form in differentials)
+                             if differential_evaluator is None else
+                             tuple(differential_evaluator(t, u)))
+            if len(sample_values) != len(differentials):
+                raise ValueError(
+                    "differential_evaluator returned the wrong number of values")
+            for index, value in enumerate(sample_values):
+                contributions[index].append(weight * value)
         for index, terms in enumerate(contributions):
             values[index] += delta_t * ctx.fsum(terms)
     return _PathIntegrals(

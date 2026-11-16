@@ -5,6 +5,14 @@ import itertools
 from ..polynomial import _polynomial_derivative, _polynomial_gcd
 
 
+def _second_kind_terms(coefficients, row, genus):
+    """Return BEL numerator terms before their common factor of one quarter."""
+    j = row + 1
+    return tuple((power, (power+1-j)*coefficients[power+1+j]
+                  if power+1+j < len(coefficients) else 0)
+                 for power in range(j, 2*genus+2-j))
+
+
 def _hyperelliptic_coefficients(ctx, coefficients):
     """Validate polynomial coefficients in ascending order."""
     try:

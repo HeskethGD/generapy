@@ -1,6 +1,6 @@
 """Specialized quadrature for Baker-marked hyperelliptic curves."""
 
-from .model import _infinity_direction
+from .model import _infinity_direction, _second_kind_terms
 
 
 def _real_branch_integrals(ctx, roots, leading, interval, count):
@@ -263,11 +263,23 @@ def _branch_target_integrals(ctx, roots, leading, branch_index, target,
     denominator = (ctx.sqrt(leading) * ctx.sqrt(difference)
                    * ctx.fprod(ctx.sqrt(reference)
                                for reference in references))
+    samples = {}
 
     def integrand(parameter, power):
-        x = branch + difference * parameter ** 2
-        continuation = ctx.fprod(
-            ctx.sqrt(1 + ratio * parameter ** 2) for ratio in ratios)
+        # Each component keeps its own adaptive quadrature and error test,
+        # but common nodes need only one product of continued square roots.
+        # This cache lives for this path evaluation only. Include precision:
+        # quadrature may temporarily raise it while evaluating the integrand.
+        key = (ctx.prec, parameter)
+        if count > 1 and key in samples:
+            x, continuation = samples[key]
+        else:
+            square = parameter ** 2
+            x = branch + difference * square
+            continuation = ctx.fprod(
+                ctx.sqrt(1 + ratio * square) for ratio in ratios)
+            if count > 1:
+                samples[key] = x, continuation
         return 2 * difference * x ** power / (denominator * continuation)
 
     continued_y = denominator * ctx.fprod(
@@ -289,8 +301,6 @@ def _second_kind_interval(ctx, coefficients, monomials, row, genus):
     """Combine monomial integrals into one canonical second-kind integral."""
     # BEL (1.3), with j = row + 1. The caller supplies coefficients through
     # degree 2*g+2, padding that coefficient with zero in odd degree.
-    j = row + 1
     return ctx.fsum(
-        (power + 1 - j) * coefficients[power + 1 + j]
-        * monomials[power] / 4
-        for power in range(j, 2 * genus + 2 - j))
+        coefficient * monomials[power] / 4
+        for power, coefficient in _second_kind_terms(coefficients, row, genus))

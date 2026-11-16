@@ -148,6 +148,68 @@ class Curve:
         """The supplied second-kind basis, or ``None`` if none was supplied."""
         return self._differentials_kind_2
 
+    def resolved_differentials_kind_1(self):
+        r"""Return callable first-kind forms and their basis metadata.
+
+        Returns a :class:`~generapy.CurveDifferentials` record. ``forms`` is
+        the ordered tuple used by first-kind period and Abel calculations;
+        each callable returns the coefficient of :math:`dx` at an original
+        affine point ``(x, y)``. Pass it to ``integral`` or ``chart_integral``.
+        Period integration is not required to resolve a basis.
+
+        ``source`` is ``'automatic'`` or ``'supplied'``. ``engine`` and
+        ``marking`` follow the period methods; ``coordinates`` is
+        ``'original'``. ``working_precision`` records the context precision
+        in bits. Automatic callables use this Curve's context; resolve again
+        after changing its precision to reconstruct derived coefficient data.
+        Supplied callables are returned unchanged.
+
+        Automatic forms have immutable ``numerators`` and ``denominator``
+        polynomial descriptions. Each polynomial is a tuple of
+        ``(x_power, y_power, coefficient)`` terms; form ``i`` is
+        ``numerators[i] / denominator`` times :math:`dx`. These are numerical
+        coefficients, not an exact symbolic representation. Both fields are
+        ``None`` for supplied callables, whose formulas are opaque.
+
+        For a genus-two leading-four model the forms are :math:`dx/y` and
+        :math:`x\,dx/y`::
+
+            >>> from generapy import Curve
+            >>> from mpmath import mp
+            >>> curve = Curve({(0, 2): 1, (5, 0): -4, (3, 0): 20, (1, 0): -16})
+            >>> basis = curve.resolved_differentials_kind_1()
+            >>> basis.source, basis.marking, len(basis.forms)
+            ('automatic', 'baker', 2)
+            >>> x, y = mp.mpf(3), mp.sqrt(480)
+            >>> mp.almosteq(basis.forms[1](x, y), x/y)
+            True
+
+        The existing ``differentials_kind_1`` property continues to describe
+        only the supplied basis.
+        """
+        return self._call(_operations.resolved_differentials,
+                          self._differentials_kind_1, kind=1, _basis=True)
+
+    def resolved_differentials_kind_2(self):
+        r"""Return callable second-kind forms and their basis metadata.
+
+        The :class:`~generapy.CurveDifferentials` fields and original-coordinate
+        callable convention follow :meth:`resolved_differentials_kind_1`.
+        Automatic hyperelliptic forms are the BEL basis used by
+        :meth:`abel_map_kind_2` and :meth:`periods_kind_2`. Their integrals are
+        :math:`\int dr`; half-periods use :math:`2\eta=-\oint_a dr` and
+        :math:`2\eta'=-\oint_b dr`. The callables do not include this minus
+        sign. They contain the same completed-square shift and normalization
+        as the automatic first-kind forms.
+
+        For other curves or custom-basis dispatch, a supplied second-kind
+        basis is required, as for :meth:`periods_kind_2`. Arbitrary supplied
+        forms are not certified to have zero residues.
+        """
+        self._require_second_kind_basis('resolved_differentials_kind_2')
+        return self._call(_operations.resolved_differentials,
+                          self._differentials_kind_2, kind=2, _basis=True)
+
     @property
     def polynomial(self):
         """Return a copy of the defining sparse polynomial mapping."""
@@ -790,6 +852,7 @@ class Curve:
 
 
 CurveBranchLocus = _records.CurveBranchLocus
+CurveDifferentials = _records.CurveDifferentials
 CurvePeriodsKind1 = _records.CurvePeriodsKind1
 CurvePeriodsKind2 = _records.CurvePeriodsKind2
 CurveAbelMapKind1 = _records.CurveAbelMapKind1
@@ -810,6 +873,7 @@ CurveLatticeReduction = _records.CurveLatticeReduction
 __all__ = [
     "Curve",
     "CurveBranchLocus",
+    "CurveDifferentials",
     "CurveChart",
     "CurveCheck",
     "CurvePeriodsKind1",

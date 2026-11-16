@@ -137,6 +137,12 @@ jobs:
           assert curve.genus == 1
           assert curve.validate(periods).passed
           assert mp.almosteq(periods.tau[0, 0], mp.j)
+          basis = curve.resolved_differentials_kind_1()
+          assert isinstance(basis, generapy.CurveDifferentials)
+          assert basis.source == 'automatic' and basis.coordinates == 'original'
+          assert mp.almosteq(basis.forms[0](2, mp.sqrt(6)), 1/mp.sqrt(6))
+          second_basis = curve.resolved_differentials_kind_2()
+          assert mp.almosteq(second_basis.forms[0](2, mp.sqrt(6)), 1/(2*mp.sqrt(6)))
           assert mp.almosteq(
               generapy.rtheta([0], [[mp.j]]), mp.jtheta(3, 0, mp.exp(-mp.pi)))
           target = (mp.mpf(2), mp.sqrt(6))
