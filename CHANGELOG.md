@@ -41,6 +41,9 @@ and this changelog is displayed in the documentation.
 
 ### Performance
 
+- Reuse common continued square-root products across hyperelliptic Abel
+  differential components at shared quadrature nodes, with evaluation-local,
+  precision-aware reuse and unchanged componentwise quadrature.
 - Share chart coordinate conversion and ambient-curve validation across
   differential components at each quadrature node, reusing polynomial terms
   for the residual and scale checks.

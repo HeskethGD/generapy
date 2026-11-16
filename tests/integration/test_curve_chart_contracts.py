@@ -39,6 +39,16 @@ def test_chart_forms_share_coordinate_validation_at_each_node():
     assert mapped == first == second
 
 
+def test_shared_chart_evaluation_still_rejects_wrong_ambient_coordinates():
+    ctx = mp.clone()
+    ctx.dps = 25
+    terms = {(0, 1): 1, (2, 0): -1}
+    curve = make_curve(ctx, terms)
+    chart = curve.chart(terms, lambda t, w: (t, w+ctx.mpf('.25'), 1))
+    with pytest.raises(ValueError, match='does not parametrize its ambient curve'):
+        curve.chart_integral(chart, (lambda x, y: x, lambda x, y: y), (0, 1), 0)
+
+
 @pytest.mark.parametrize('digits', [20, 40, 80])
 def test_turning_point_chart_integral_preserves_branch_for_coarse_path(digits):
     """Issue #4: W is positive even though ambient Y changes sign."""

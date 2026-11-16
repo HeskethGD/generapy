@@ -11,6 +11,55 @@ from generapy.curves._hyperelliptic import model as hyperelliptic_model
 from generapy.curves._hyperelliptic import operations as hyperelliptic_operations
 
 
+@pytest.mark.parametrize('digits', [20, 40])
+@pytest.mark.parametrize('degree', [5, 6, 7])
+def test_branch_monomial_integrals_share_nodes_without_changing_moments(digits, degree):
+    ctx = mp.clone()
+    ctx.dps = digits
+    roots = tuple(ctx.mpf(i) for i in range(degree))
+    branch, target = roots[-1], roots[-1]+1
+    supplied_y = 2*ctx.sqrt(ctx.fprod(target-r for r in roots))
+    count = degree-1
+    expected = tuple(ctx.quad(
+        lambda t, power=power: (branch+t*t)**power/ctx.sqrt(
+            ctx.fprod(branch+t*t-r for r in roots[:-1])), [0, 1])
+        for power in range(count))
+    for sign in (1, -1):
+        actual = hyperelliptic_integration._branch_target_integrals(
+            ctx, roots, ctx.mpf(4), degree-1, target,
+            sign*supplied_y, count, ctx.eps)
+        assert all(abs(a-sign*b) < 1000*ctx.eps*max(1, abs(b))
+                   for a, b in zip(actual, expected))
+    single = hyperelliptic_integration._branch_target_integrals(
+        ctx, roots, ctx.mpf(4), degree-1, target, supplied_y, 1, ctx.eps)
+    assert abs(single[0]-expected[0]) < 1000*ctx.eps
+
+
+def test_shared_branch_nodes_respect_quadrature_working_precision(monkeypatch):
+    ctx = mp.clone()
+    ctx.dps = 25
+    roots = tuple(map(ctx.mpf, (-64, -16, -4, -1, 0)))
+    calls = []
+
+    def sample_quad(function, interval):
+        power = len(calls)
+        # Identical nodes at different precisions must not reuse a rounded
+        # square-root product. All path constants here are exactly binary.
+        with ctx.extraprec(80*power):
+            value = function(ctx.mpf('.5'))
+            x = ctx.mpf('.25')
+            expected = x**power/(64*ctx.sqrt(ctx.fprod(1+x/(-r) for r in roots[:-1])))
+            assert abs(value-expected) < 100*ctx.eps*abs(expected)
+        calls.append(value)
+        return value
+
+    monkeypatch.setattr(ctx, 'quad', sample_quad)
+    hyperelliptic_integration._branch_target_integrals(
+        ctx, roots, ctx.mpf(4), 4, ctx.one,
+        2*ctx.sqrt(ctx.fprod(1-r for r in roots)), 2, ctx.eps)
+    assert len(calls) == 2
+
+
 def test_finite_base_abel_cancels_shared_references_and_preserves_validation(monkeypatch):
     ctx = mp.clone()
     ctx.dps = 25
