@@ -13,7 +13,7 @@ def _polynomial_trim(ctx, coefficients, tolerance=None):
         while len(coefficients) > 1 and not coefficients[-1]:
             coefficients.pop()
     else:
-        scale = max([ctx.one] + [abs(value) for value in coefficients])
+        scale = max((abs(value) for value in coefficients), default=ctx.zero)
         while (len(coefficients) > 1
                and abs(coefficients[-1]) <= tolerance * scale):
             coefficients.pop()
@@ -53,22 +53,20 @@ def _polynomial_divmod(ctx, dividend, divisor, tolerance=None):
     """Divide ascending polynomials, trimming numerical roundoff."""
     if tolerance is None:
         tolerance = 100 * ctx.eps
-    dividend = list(_polynomial_trim(ctx, dividend, tolerance))
-    divisor = _polynomial_trim(ctx, divisor, tolerance)
+    # Degree is structural: small leading coefficients can encode large roots.
+    # Remove only exact zeros before division, and eliminate each degree once.
+    dividend = list(_polynomial_trim(ctx, dividend))
+    divisor = _polynomial_trim(ctx, divisor)
     if len(divisor) == 1 and not divisor[0]:
         raise ZeroDivisionError("polynomial division by zero")
     quotient = [ctx.zero] * max(1, len(dividend) - len(divisor) + 1)
-    while len(dividend) >= len(divisor):
-        degree = len(dividend) - len(divisor)
+    for degree in range(len(dividend) - len(divisor), -1, -1):
         coefficient = dividend[-1] / divisor[-1]
-        quotient[degree] += coefficient
-        for index, value in enumerate(divisor):
+        quotient[degree] = coefficient
+        for index, value in enumerate(divisor[:-1]):
             dividend[index + degree] -= coefficient * value
-        dividend = list(_polynomial_trim(ctx, dividend, tolerance))
-        if len(dividend) == 1 and abs(dividend[0]) <= tolerance:
-            dividend[0] = ctx.zero
-            break
-    return (_polynomial_trim(ctx, quotient, tolerance),
+        dividend.pop()
+    return (_polynomial_trim(ctx, quotient),
             _polynomial_trim(ctx, dividend, tolerance))
 
 
@@ -76,14 +74,14 @@ def _polynomial_exact_quotient(ctx, dividend, divisor):
     tolerance = ctx.sqrt(ctx.eps)
     quotient, remainder = _polynomial_divmod(
         ctx, dividend, divisor, tolerance=tolerance)
-    scale = max([ctx.one] + [abs(value) for value in dividend])
+    scale = max(abs(value) for value in dividend)
     if max(abs(value) for value in remainder) > tolerance * scale:
         raise ValueError("polynomial Bareiss division was not exact")
     return quotient
 
 
-def _polynomial_monic(ctx, coefficients, tolerance):
-    coefficients = _polynomial_trim(ctx, coefficients, tolerance)
+def _polynomial_monic(ctx, coefficients):
+    coefficients = _polynomial_trim(ctx, coefficients)
     if len(coefficients) == 1 and not coefficients[0]:
         return coefficients
     leading = coefficients[-1]
@@ -93,8 +91,8 @@ def _polynomial_monic(ctx, coefficients, tolerance):
 def _polynomial_gcd(ctx, left, right):
     """Return a numerical monic GCD of ascending polynomials."""
     tolerance = ctx.sqrt(ctx.eps)
-    left = _polynomial_monic(ctx, left, tolerance)
-    right = _polynomial_monic(ctx, right, tolerance)
+    left = _polynomial_monic(ctx, left)
+    right = _polynomial_monic(ctx, right)
     while not (len(right) == 1 and not right[0]):
         unused, remainder = _polynomial_divmod(
             ctx, left, right, tolerance=tolerance)
@@ -102,14 +100,14 @@ def _polynomial_gcd(ctx, left, right):
         if max(abs(value) for value in remainder) <= tolerance * scale:
             remainder = (ctx.zero,)
         left, right = right, _polynomial_monic(
-            ctx, remainder, tolerance)
+            ctx, remainder)
     return left
 
 
 def _polynomial_squarefree_part(ctx, coefficients):
     """Remove repeated factors from a univariate polynomial."""
     tolerance = ctx.sqrt(ctx.eps)
-    coefficients = _polynomial_trim(ctx, coefficients, tolerance)
+    coefficients = _polynomial_trim(ctx, coefficients)
     derivative = _polynomial_derivative(ctx, coefficients)
     divisor = _polynomial_gcd(ctx, coefficients, derivative)
     quotient, remainder = _polynomial_divmod(
@@ -117,7 +115,7 @@ def _polynomial_squarefree_part(ctx, coefficients):
     scale = max([ctx.one] + [abs(value) for value in coefficients])
     if max(abs(value) for value in remainder) > tolerance * scale:
         raise ValueError("failed to form squarefree critical polynomial")
-    return _polynomial_monic(ctx, quotient, tolerance)
+    return _polynomial_monic(ctx, quotient)
 
 
 def _polynomial_determinant(ctx, matrix):
@@ -225,27 +223,33 @@ def _plane_curve_resultant_y(ctx, curve):
     return _polynomial_determinant(ctx, matrix)
 
 
+def _conditioned_polynomial_roots(ctx, coefficients, **options):
+    """Solve after shifting the centroid and scaling a polynomial root bound."""
+    degree = len(coefficients) - 1
+    center = -coefficients[-2] / (degree * coefficients[-1])
+    # Horner composition forms p(center + z), in ascending order.
+    shifted = [coefficients[-1]]
+    for coefficient in reversed(coefficients[:-1]):
+        shifted = ([center * shifted[0] + coefficient] +
+                   [shifted[i-1] + center * shifted[i]
+                    for i in range(1, len(shifted))] + [shifted[-1]])
+    scale = max([ctx.one] + [
+        abs(shifted[i] / shifted[-1]) ** (ctx.one / (degree-i))
+        for i in range(degree)])
+    normalized = [value / shifted[-1] / scale ** (degree-i)
+                  for i, value in enumerate(shifted)]
+    return tuple(center + scale * root for root in ctx.polyroots(
+        normalized, asc=True, **options))
+
+
 def _critical_polynomial_roots(ctx, coefficients):
     """Resolve a squarefree polynomial, conditioning a failed solve locally."""
     try:
         roots = ctx.polyroots(
             coefficients, maxsteps=1000, error=False, asc=True)
     except ctx.NoConvergence:
-        degree = len(coefficients) - 1
-        center = -coefficients[-2] / (degree * coefficients[-1])
-        # Horner composition forms p(center + z), in ascending order.
-        shifted = [coefficients[-1]]
-        for coefficient in reversed(coefficients[:-1]):
-            shifted = ([center * shifted[0] + coefficient] +
-                       [shifted[i-1] + center * shifted[i]
-                        for i in range(1, len(shifted))] + [shifted[-1]])
-        scale = max([ctx.one] + [
-            abs(shifted[i] / shifted[-1]) ** (ctx.one / (degree-i))
-            for i in range(degree)])
-        normalized = [value / shifted[-1] / scale ** (degree-i)
-                      for i, value in enumerate(shifted)]
-        roots = [center + scale * root for root in ctx.polyroots(
-            normalized, maxsteps=1000, error=False, asc=True)]
+        roots = _conditioned_polynomial_roots(
+            ctx, coefficients, maxsteps=1000, error=False)
     # Check the original polynomial, not just the conditioned one. A failed
     # check lets the caller rebuild the resultant with more guard precision.
     for root in roots:
@@ -477,15 +481,48 @@ def _finite_plane_curve_sheets(ctx, curve, x):
     x = ctx.convert(x)
     if not ctx.isfinite(x):
         raise ValueError("the projection point must be finite")
-    coefficients = [ctx.zero] * (curve.y_degree + 1)
-    for x_power, y_power, coefficient in curve.terms:
-        coefficients[y_power] += coefficient * x ** x_power
-    while coefficients and not coefficients[-1]:
-        coefficients.pop()
-    if len(coefficients) < 2:
-        return ()
-    return tuple(ctx.polyroots(
-        coefficients, maxsteps=100, cleanup=False, extraprec=20, asc=True))
+    failure = None
+    for extra_precision, maxsteps in ((0, 100), (30, 400), (80, 1000)):
+        try:
+            with ctx.extraprec(extra_precision):
+                # Rebuild under guard precision: near infinity the finite roots
+                # can coexist with much larger roots. Keep every nonzero degree.
+                coefficients = _plane_polynomial_y_coefficients(
+                    ctx, curve, x, allow_degree_drop=True)
+                if len(coefficients) < 2:
+                    return ()
+                if extra_precision:
+                    roots = _conditioned_polynomial_roots(
+                        ctx, coefficients, maxsteps=maxsteps, cleanup=False,
+                        extraprec=30)
+                    # Undoing the shift can lose digits on bounded roots.
+                    # Polish against the original fibre, not its transform.
+                    derivative = _polynomial_derivative(ctx, coefficients)
+                    polished = []
+                    for root in roots:
+                        for unused in range(4):
+                            slope = ctx.polyval(derivative, root, asc=True)
+                            if not slope:
+                                break
+                            root -= ctx.polyval(coefficients, root, asc=True) / slope
+                        polished.append(root)
+                    roots = polished
+                else:
+                    roots = ctx.polyroots(
+                        coefficients, maxsteps=maxsteps, cleanup=False,
+                        extraprec=20, asc=True)
+                if len(roots) != len(coefficients) - 1:
+                    raise ctx.NoConvergence("incomplete chart fibre")
+                for root in roots:
+                    bound = ctx.fsum(abs(c) * max(ctx.one, abs(root))**i
+                                     for i, c in enumerate(coefficients))
+                    if (not ctx.isfinite(root) or abs(ctx.polyval(
+                            coefficients, root, asc=True)) > 100 * ctx.eps * bound):
+                        raise ctx.NoConvergence("chart fibre root residual too large")
+            return tuple(+root for root in roots)
+        except ctx.NoConvergence as exc:
+            failure = exc
+    raise ctx.NoConvergence("failed to resolve finite chart fibre") from failure
 
 
 # Root matching and sheet fibres
