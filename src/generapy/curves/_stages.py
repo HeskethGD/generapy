@@ -20,6 +20,7 @@ from .integration import (
     _integrate_geometric_chains,
     _integrate_geometric_loops_iterated,
     _integrate_plane_curve_branch,
+    _integrate_plane_curve_path,
     _pullback_plane_curve_differentials,
 )
 from .jacobian import (
@@ -29,6 +30,7 @@ from .jacobian import (
     _riemann_constant_from_iterated_cycles,
 )
 from .homology import (
+    _geometric_sheet_connector,
     _geometric_canonical_polygon,
     _geometric_ribbon_graph,
 )
@@ -199,9 +201,27 @@ def _geometric_riemann_constant(ctx, curve, forms=None):
     return tuple(+entry for entry in value), cycles
 
 
+@_curve_stage_cache(128)
+def _stage_geometric_abel_edge(ctx, key):
+    """Reuse immutable connector edge integrals for a curve and form basis."""
+    curve, first_forms, second_forms, index = key
+    data = _geometric_period_data_working(ctx, curve, first_forms)
+    supplied = first_forms is not None or bool(second_forms)
+    if first_forms is None:
+        first_forms = tuple(_baker_callable(ctx, data.basis, i)
+                            for i in range(data.genus))
+    edge = data.graph.edges[index]
+    return _integrate_plane_curve_path(
+        ctx, curve, data.cover.continuations[edge.base_edge],
+        first_forms + second_forms, sheet=edge.sheet,
+        quadrature_order="geometry",
+        branch_values=data.cover.geometry.branch_values,
+        check_convergence=supplied).values
+
+
 def _geometric_abel_divisor(ctx, curve, places, base_place=None, forms=None,
                             second_forms=()):
-    """Integrate a divisor with shared operation-local edge and rule caches.
+    """Integrate a divisor, reusing bounded, precision-aware connector integrals.
 
     Ownership is checked at caller precision before entering the guarded
     computation. A chart tail runs from the represented place to its affine
@@ -221,6 +241,16 @@ def _geometric_abel_divisor(ctx, curve, places, base_place=None, forms=None,
     base = None if base_place is None else endpoint(base_place, "base_place")
     with ctx.extraprec(_GEOMETRIC_GUARD_BITS):
         supplied = forms is not None or bool(second_forms)
+        basis_key = (curve, forms, tuple(second_forms))
+        edge_integrator = None
+        try:
+            hash(basis_key)
+        except TypeError:
+            # Keep unhashable callable bases on the operation-local path.
+            pass
+        else:
+            def edge_integrator(index):
+                return _stage_geometric_abel_edge(ctx, basis_key + (index,))
         data = _geometric_period_data_working(ctx, curve, forms)
         if forms is None:
             forms = tuple(_baker_callable(ctx, data.basis, i)
@@ -236,7 +266,7 @@ def _geometric_abel_divisor(ctx, curve, places, base_place=None, forms=None,
             value = _finite_geometric_abel_value(
                 ctx, curve, data, junction, forms,
                 quadrature_cache=rules, edge_cache=edges,
-                check_convergence=supplied)
+                check_convergence=supplied, edge_integrator=edge_integrator)
             if tail is not None:
                 pullbacks = _pullback_plane_curve_differentials(forms, coordinate_map)
                 local = _integrate_plane_curve_branch(

@@ -22,6 +22,26 @@ Each entry should include:
 
 <!-- Entries will be added as releases occur and optimizations are made -->
 
+### Unreleased: geometric Abel connector reuse (#33, 2026-11-21)
+
+Exploratory measurements on the Fermat quartic at 20 decimal digits compared
+three batches of four first-kind Abel maps, one point per sheet at
+`x = 1.2 + 0.3j`. Period setup was warmed before timing. The initial batch
+warmed connector integrals; the next two batches measured repeated calls.
+No source edits or other benchmark instances ran during either measurement.
+These were development working-tree experiments, not a release baseline.
+
+Warm batches fell from a median 0.313 s to 0.153 s, about 2.0x faster.
+Connector integrations fell from 15 per warm batch to zero; all four open
+paths were still integrated. Initial batches took 0.344 s before and 0.330 s
+after. All returned value strings matched before and after at 20 digits.
+
+The bounded cache stores immutable edge-integral vectors, separated by curve,
+first- and second-kind bases, context and numerical state. Unhashable bases
+retain operation-local reuse. This addresses repeated connector integration
+only: the reported genus-four case, full-fibre open continuation, periods and
+Riemann constants still need separate profiling. Issue #33 remains partial.
+
 ### v0.2.0 pre-release: shared integration work for #9/#10 (2026-11-16)
 
 **Report:** [complete integration results and protocol](baselines/v0.2.0/integration.md).

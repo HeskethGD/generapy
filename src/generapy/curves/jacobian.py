@@ -237,7 +237,7 @@ def _guarded_open_path(ctx, start, end, branch_points):
 
 def _finite_geometric_abel_value(ctx, curve, data, place, differentials,
                                  quadrature_cache=None, edge_cache=None,
-                                 check_convergence=False):
+                                 check_convergence=False, edge_integrator=None):
     """Integrate from the geometric root to a validated regular finite place.
 
     The open lift starts with all sheets in the root fibre. A tree connector
@@ -274,7 +274,8 @@ def _finite_geometric_abel_value(ctx, curve, data, place, differentials,
     for index, orientation in connector:
         edge = graph.edges[index]
         if index not in edges:
-            edges[index] = integrate(cover.continuations[edge.base_edge], edge.sheet)
+            edges[index] = (integrate(cover.continuations[edge.base_edge], edge.sheet)
+                            if edge_integrator is None else edge_integrator(index))
         pieces.append(tuple(orientation * value for value in edges[index]))
     return tuple(ctx.fsum(piece[i] for piece in pieces)
                  for i in range(len(differentials)))
