@@ -396,3 +396,67 @@ def test_chart_quadrature_refines_an_ambiguous_node_on_the_correct_branch():
     # This deliberately coarse panel tests branch selection, not the
     # accuracy of a fixed quadrature rule at a nearby complex singularity.
     assert abs(integral.values[0]-reference) < ctx.mpf('1e-8')
+
+
+@pytest.mark.parametrize('digits', [20, 40])
+def test_geometric_quadrature_is_independent_of_continuation_mesh_density(digits):
+    ctx = mp.clone()
+    ctx.dps = digits
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    path = tuple(1+ctx.mpf(3)*i/128 for i in range(129))
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, path)
+    sheet = min(range(3), key=lambda i: abs(lift.fibres[0][i]-1))
+    samples = []
+
+    def form(x, y):
+        samples.append(x)
+        return 1/(3*y*y)  # dy/dx on y**3=x.
+
+    result = _integrate_plane_curve_path(
+        ctx, curve, lift, (form,), sheet=sheet,
+        quadrature_order='geometry', branch_values=(0,), check_convergence=True)
+    assert abs(result.values[0]-(ctx.root(4, 3)-1)) < 1000*ctx.eps
+    assert len(samples) < 4*len(path)
+    assert result.segments == lift.steps
+
+
+def test_geometric_panels_preserve_corners_winding_and_sheet_labels():
+    ctx = mp.clone()
+    ctx.dps = 25
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    path = tuple(ctx.exp(2*ctx.j*ctx.pi*i/12) for i in range(13))
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, path)
+    sheet = min(range(3), key=lambda i: abs(lift.fibres[0][i]-1))
+    result = _integrate_plane_curve_path(
+        ctx, curve, lift, (lambda x, y: 1/x, lambda x, y: 1/(3*y*y)),
+        sheet=sheet, quadrature_order='geometry', branch_values=(0,),
+        check_convergence=True)
+    assert abs(result.values[0]-2*ctx.j*ctx.pi) < 1000*ctx.eps
+    assert abs(result.values[1]-(lift.fibres[-1][sheet]-1)) < 1000*ctx.eps
+
+
+def test_geometric_panels_still_reject_an_unmodelled_nearby_pole():
+    ctx = mp.clone()
+    ctx.dps = 25
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, (1, 4))
+    with pytest.raises(ctx.NoConvergence, match='path quadrature'):
+        _integrate_plane_curve_path(
+            ctx, curve, lift, (lambda x, y: 1/(x-ctx.mpc('2.5', '.001')),),
+            quadrature_order='geometry', branch_values=(0,), check_convergence=True)
+
+
+def test_geometric_panel_sampler_can_fall_back_to_original_segments(monkeypatch):
+    ctx = mp.clone()
+    ctx.dps = 25
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, (1, 4))
+
+    def unresolved_collinearity(*args):
+        raise ValueError('straight ordered path unresolved at this precision')
+
+    monkeypatch.setattr(curve_integration, '_LiftedEdgeSampler', unresolved_collinearity)
+    result = _integrate_plane_curve_path(
+        ctx, curve, lift, (lambda x, y: 1,),
+        quadrature_order='geometry', branch_values=(0,))
+    assert abs(result.values[0]-3) < 1000*ctx.eps

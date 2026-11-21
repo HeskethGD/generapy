@@ -196,6 +196,92 @@ def _plane_curve_segment_samples(
         parameters, sheet)
 
 
+def _straight_lifted_pieces(ctx, continuation):
+    """Group collinear samples without removing corners or reversing turns."""
+    path = continuation.path
+    start = 0
+    for end in range(1, len(path)):
+        if path[end] == path[start]:
+            continue
+        if end + 1 < len(path):
+            delta = path[end] - path[start]
+            ratio = (path[end + 1] - path[start]) / delta
+            tolerance = (100 * ctx.eps * max(
+                ctx.one, abs(path[start]), abs(path[end]), abs(path[end + 1]))
+                / abs(delta))
+            if ctx.re(ratio) > 1 and abs(ctx.im(ratio)) <= tolerance:
+                continue
+        yield continuation._replace(
+            path=path[start:end + 1], fibres=continuation.fibres[start:end + 1])
+        start = end
+
+
+def _integrate_geometric_callable_path(
+        ctx, curve, continuation, differentials, sheet, branch_values,
+        rules, check_convergence, differential_evaluator):
+    """Integrate panels independently of the mesh used to label sheets.
+
+    The existing fine continuation remains the sampler's branch reference.
+    Opaque forms retain bounded successive-order checks on every panel.
+    """
+    samplers = []
+    for piece in _straight_lifted_pieces(ctx, continuation):
+        try:
+            sampler = _LiftedEdgeSampler(ctx, curve, piece)
+        except ValueError:
+            # Ill-scaled coordinates may obscure collinearity at this
+            # precision. The original segment-by-segment route remains valid.
+            return None
+        samplers.append(sampler)
+
+    def panel(sampler, lower, upper, order):
+        if order not in rules:
+            rules[order] = _gauss_legendre_rule(ctx, order)
+        parameters, weights = rules[order]
+        width = upper - lower
+        terms = [[] for unused in differentials]
+        residual = ctx.zero
+        for parameter, weight in zip(parameters, weights):
+            x, y, error = sampler.sample(lower + width * parameter, sheet)
+            residual = max(residual, error)
+            sample = (tuple(form(x, y) for form in differentials)
+                      if differential_evaluator is None else
+                      tuple(differential_evaluator(x, y)))
+            if len(sample) != len(differentials):
+                raise ValueError("differential_evaluator returned the wrong number of values")
+            for row, value in zip(terms, sample):
+                row.append(weight * value)
+        return tuple(sampler.delta * width * ctx.fsum(row) for row in terms), residual
+
+    pieces = []
+    residual = ctx.zero
+    for sampler in samplers:
+        panels = _geometric_edge_panels(
+            ctx, sampler.left, sampler.left + sampler.delta, branch_values)
+        for lower, upper, order in panels:
+            value, error = panel(sampler, lower, upper, order)
+            residual = max(residual, error)
+            if check_convergence:
+                for unused in range(5):
+                    larger = next((candidate for candidate in _REUSABLE_GAUSS_ORDERS
+                                   if candidate > order), 32 * ((order + 32) // 32))
+                    refined, error = panel(sampler, lower, upper, larger)
+                    residual = max(residual, error)
+                    converged = all(
+                        ctx.isfinite(a) and ctx.isfinite(b)
+                        and abs(a-b) <= 100 * ctx.eps * max(ctx.one, abs(b))
+                        for a, b in zip(value, refined))
+                    value, order = refined, larger
+                    if converged:
+                        break
+                else:
+                    raise ctx.NoConvergence("path quadrature did not reach working precision")
+            pieces.append(value)
+    return _PathIntegrals(
+        tuple(ctx.fsum(value[i] for value in pieces) for i in range(len(differentials))),
+        residual, len(continuation.path) - 1)
+
+
 def _integrate_plane_curve_path(
         ctx, curve, continuation, differentials, sheet=0,
         quadrature_order=None, branch_values=None,
@@ -242,6 +328,13 @@ def _integrate_plane_curve_path(
                           or quadrature_order < 2):
         raise ValueError("quadrature_order must be an integer at least 2")
     rules = {} if quadrature_cache is None else quadrature_cache
+
+    if geometric and curve.y_degree > 2:
+        result = _integrate_geometric_callable_path(
+            ctx, curve, continuation, differentials, sheet, branch_values,
+            rules, check_convergence, differential_evaluator)
+        if result is not None:
+            return result
 
     def rule(order):
         if order not in rules:
