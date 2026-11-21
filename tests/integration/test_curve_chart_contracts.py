@@ -190,3 +190,48 @@ def test_monomial_chart_rejects_legacy_polynomial_sources(source):
     curve = make_curve(mp, TERMS)
     with pytest.raises(ValueError, match="sparse mapping"):
         curve.monomial_chart(-2, -3, source=source)
+
+
+INFINITY_CHART_TERMS = {(0, 0): -1232,
+ (0, 1): 576,
+ (0, 2): -64,
+ (1, 0): 30064,
+ (1, 1): -4000,
+ (1, 2): -1216,
+ (1, 3): 128,
+ (2, 0): 901041,
+ (2, 1): -256524,
+ (2, 2): 9808,
+ (2, 3): 816,
+ (2, 4): -80,
+ (3, 0): 396472,
+ (3, 1): -550865,
+ (3, 2): 123036,
+ (3, 3): -3744,
+ (3, 4): -176,
+ (3, 5): 16}
+
+
+@pytest.mark.parametrize("digits", [15, 20, 40])
+@pytest.mark.parametrize("parameter", ["0", "0.0002", "0.0005", "0.001", "0.03"])
+def test_infinity_chart_fibre_keeps_bounded_and_large_roots(digits, parameter):
+    from tests.unit.test_curve_polynomial import QUINTIC
+    ctx = mp.clone()
+    ctx.dps = digits
+    curve = make_curve(ctx, {(j, i): ctx.mpf(p) / q
+                             for (i, j), (p, q) in QUINTIC.items()})
+    chart = curve.chart(INFINITY_CHART_TERMS,
+                        lambda t, w: (1/t, -1/t+w, -1/t**2))
+    t = ctx.mpf(parameter)
+    roots = curve.chart_fibre(chart, t)
+    assert len(roots) == (5 if t else 2)
+    if not t:
+        assert all(abs(root - expected) < 1000 * ctx.eps
+                   for root, expected in zip(roots, (ctx.mpf("3.5"), ctx.mpf("5.5"))))
+    else:
+        # Three divergent sheets must not be discarded to find the finite two.
+        assert sum(abs(root) > 1/(2*t) for root in roots) == 3
+    for root in roots:
+        terms = [c*t**i*root**j for (i, j), c in INFINITY_CHART_TERMS.items()]
+        assert abs(ctx.fsum(terms)) <= 1000 * ctx.eps * ctx.fsum(map(abs, terms))
+    assert ctx.dps == digits

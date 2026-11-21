@@ -223,27 +223,33 @@ def _plane_curve_resultant_y(ctx, curve):
     return _polynomial_determinant(ctx, matrix)
 
 
+def _conditioned_polynomial_roots(ctx, coefficients, **options):
+    """Solve after shifting the centroid and scaling a polynomial root bound."""
+    degree = len(coefficients) - 1
+    center = -coefficients[-2] / (degree * coefficients[-1])
+    # Horner composition forms p(center + z), in ascending order.
+    shifted = [coefficients[-1]]
+    for coefficient in reversed(coefficients[:-1]):
+        shifted = ([center * shifted[0] + coefficient] +
+                   [shifted[i-1] + center * shifted[i]
+                    for i in range(1, len(shifted))] + [shifted[-1]])
+    scale = max([ctx.one] + [
+        abs(shifted[i] / shifted[-1]) ** (ctx.one / (degree-i))
+        for i in range(degree)])
+    normalized = [value / shifted[-1] / scale ** (degree-i)
+                  for i, value in enumerate(shifted)]
+    return tuple(center + scale * root for root in ctx.polyroots(
+        normalized, asc=True, **options))
+
+
 def _critical_polynomial_roots(ctx, coefficients):
     """Resolve a squarefree polynomial, conditioning a failed solve locally."""
     try:
         roots = ctx.polyroots(
             coefficients, maxsteps=1000, error=False, asc=True)
     except ctx.NoConvergence:
-        degree = len(coefficients) - 1
-        center = -coefficients[-2] / (degree * coefficients[-1])
-        # Horner composition forms p(center + z), in ascending order.
-        shifted = [coefficients[-1]]
-        for coefficient in reversed(coefficients[:-1]):
-            shifted = ([center * shifted[0] + coefficient] +
-                       [shifted[i-1] + center * shifted[i]
-                        for i in range(1, len(shifted))] + [shifted[-1]])
-        scale = max([ctx.one] + [
-            abs(shifted[i] / shifted[-1]) ** (ctx.one / (degree-i))
-            for i in range(degree)])
-        normalized = [value / shifted[-1] / scale ** (degree-i)
-                      for i, value in enumerate(shifted)]
-        roots = [center + scale * root for root in ctx.polyroots(
-            normalized, maxsteps=1000, error=False, asc=True)]
+        roots = _conditioned_polynomial_roots(
+            ctx, coefficients, maxsteps=1000, error=False)
     # Check the original polynomial, not just the conditioned one. A failed
     # check lets the caller rebuild the resultant with more guard precision.
     for root in roots:
@@ -475,15 +481,48 @@ def _finite_plane_curve_sheets(ctx, curve, x):
     x = ctx.convert(x)
     if not ctx.isfinite(x):
         raise ValueError("the projection point must be finite")
-    coefficients = [ctx.zero] * (curve.y_degree + 1)
-    for x_power, y_power, coefficient in curve.terms:
-        coefficients[y_power] += coefficient * x ** x_power
-    while coefficients and not coefficients[-1]:
-        coefficients.pop()
-    if len(coefficients) < 2:
-        return ()
-    return tuple(ctx.polyroots(
-        coefficients, maxsteps=100, cleanup=False, extraprec=20, asc=True))
+    failure = None
+    for extra_precision, maxsteps in ((0, 100), (30, 400), (80, 1000)):
+        try:
+            with ctx.extraprec(extra_precision):
+                # Rebuild under guard precision: near infinity the finite roots
+                # can coexist with much larger roots. Keep every nonzero degree.
+                coefficients = _plane_polynomial_y_coefficients(
+                    ctx, curve, x, allow_degree_drop=True)
+                if len(coefficients) < 2:
+                    return ()
+                if extra_precision:
+                    roots = _conditioned_polynomial_roots(
+                        ctx, coefficients, maxsteps=maxsteps, cleanup=False,
+                        extraprec=30)
+                    # Undoing the shift can lose digits on bounded roots.
+                    # Polish against the original fibre, not its transform.
+                    derivative = _polynomial_derivative(ctx, coefficients)
+                    polished = []
+                    for root in roots:
+                        for unused in range(4):
+                            slope = ctx.polyval(derivative, root, asc=True)
+                            if not slope:
+                                break
+                            root -= ctx.polyval(coefficients, root, asc=True) / slope
+                        polished.append(root)
+                    roots = polished
+                else:
+                    roots = ctx.polyroots(
+                        coefficients, maxsteps=maxsteps, cleanup=False,
+                        extraprec=20, asc=True)
+                if len(roots) != len(coefficients) - 1:
+                    raise ctx.NoConvergence("incomplete chart fibre")
+                for root in roots:
+                    bound = ctx.fsum(abs(c) * max(ctx.one, abs(root))**i
+                                     for i, c in enumerate(coefficients))
+                    if (not ctx.isfinite(root) or abs(ctx.polyval(
+                            coefficients, root, asc=True)) > 100 * ctx.eps * bound):
+                        raise ctx.NoConvergence("chart fibre root residual too large")
+            return tuple(+root for root in roots)
+        except ctx.NoConvergence as exc:
+            failure = exc
+    raise ctx.NoConvergence("failed to resolve finite chart fibre") from failure
 
 
 # Root matching and sheet fibres

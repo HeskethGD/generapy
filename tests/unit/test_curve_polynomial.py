@@ -296,3 +296,14 @@ def test_division_preserves_a_small_but_genuine_leading_coefficient():
     assert _polynomial_squarefree_part(ctx, dividend) == tuple(
         value / dividend[-1] for value in dividend)
 
+
+@pytest.mark.parametrize("bad_roots", [[], [2, 2], [mp.inf, mp.inf]])
+def test_finite_fibre_rejects_incomplete_or_invalid_roots_and_restores_precision(
+        monkeypatch, bad_roots):
+    ctx = mp.clone()
+    precision = ctx.prec
+    curve = _prepare_plane_curve(ctx, {(0, 2): 1, (0, 0): 1})
+    monkeypatch.setattr(ctx, "polyroots", lambda *args, **kwargs: bad_roots)
+    with pytest.raises(ctx.NoConvergence, match="failed to resolve finite chart fibre"):
+        _finite_plane_curve_sheets(ctx, curve, 0)
+    assert ctx.prec == precision

@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Preserve genuine small polynomial coefficients during resultant division and
   squarefree reduction, and use relative trimming for scaled curve equations
   (#27, #28).
+- Retry difficult chart fibres with conditioned root solving and guard precision,
+  retaining finite and large roots near a place at infinity (#34).
 
 ## [0.2.0] - 2026-11-16
 
