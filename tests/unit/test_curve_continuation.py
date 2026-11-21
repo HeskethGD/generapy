@@ -364,3 +364,21 @@ def test_edge_sampler_rejects_refinement_that_changes_sheet_labels(monkeypatch):
         continuation, "_continue_plane_curve_sheets_adaptive", changed_labels)
     with pytest.raises(ctx.NoConvergence, match="changed the sheet labels"):
         sampler.sample(ctx.mpf('.5'), 1)
+
+
+def test_remote_pole_sheet_uses_its_own_separation_for_step_acceptance():
+    ctx = mp.clone()
+    ctx.dps = 25
+    # (y**2-x)*(x*y-1): a close pair +/-sqrt(x), and a remote pole 1/x.
+    # The pole moves much farther than the close pair's separation allows,
+    # but by a small fraction of its own separation from either neighbour.
+    curve = _prepare_plane_curve(ctx, {(1, 3): 1, (0, 2): -1,
+                                       (2, 1): -1, (1, 0): 1})
+    left, right = ctx.mpf('.01'), ctx.mpf('.01001')
+    sheets = (-ctx.sqrt(left), ctx.sqrt(left), 1/left)
+    result = continuation._continue_plane_curve_sheets_adaptive(
+        ctx, curve, (left, right), initial_sheets=sheets, max_refinements=0)
+    expected = (-ctx.sqrt(right), ctx.sqrt(right), 1/right)
+    assert result.steps == 1 and result.refinements == 0
+    assert all(abs(got-want) < 1000*ctx.eps
+               for got, want in zip(result.sheets, expected))

@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Allow unramified sheet poles in radial monodromy diagnostics and use each
+  sheet's own separation when refining continuation steps (#29).
+
 - Preserve genuine small polynomial coefficients during resultant division and
   squarefree reduction, and use relative trimming for scaled curve equations
   (#27, #28).

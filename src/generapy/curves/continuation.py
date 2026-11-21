@@ -167,8 +167,8 @@ def _continue_plane_curve_sheets_adaptive(
         correction_fraction=None, motion_fraction=None):
     """Continue sheets while bisecting numerically unsafe path segments.
 
-    Acceptance compares prediction error and sheet motion with the local
-    minimum sheet separation.  Geometry remains the caller's responsibility:
+    Acceptance compares prediction error and sheet motion with each sheet's
+    local nearest-neighbour separation.  Geometry remains the caller's responsibility:
     subdivision improves resolution but cannot repair a path through a
     critical value.
 
@@ -231,17 +231,21 @@ def _continue_plane_curve_sheets_adaptive(
             assignment = _minimum_cost_assignment(
                 ctx, predictions, candidates)
             next_sheets = tuple(candidates[index] for index in assignment)
-            separation = min(
-                _minimum_root_separation(ctx, sheets),
-                _minimum_root_separation(ctx, next_sheets))
             correction = max(
                 abs(value - prediction)
                 for value, prediction in zip(next_sheets, predictions))
-            motion = max(abs(value - sheet)
-                         for value, sheet in zip(next_sheets, sheets))
-            acceptable = (
-                correction <= correction_fraction * separation
-                and motion <= motion_fraction * separation)
+            # Compare each sheet with its own nearest neighbour. A remote
+            # pole sheet need not move at the scale of an unrelated close pair.
+            gaps = tuple(min(
+                (min(abs(sheet - other), abs(next_sheets[i] - next_sheets[j]))
+                 for j, other in enumerate(sheets) if i != j),
+                default=ctx.inf) for i, sheet in enumerate(sheets))
+            separation = min(gaps)
+            acceptable = all(
+                abs(value - prediction) <= correction_fraction * gap
+                and abs(value - sheet) <= motion_fraction * gap
+                for value, prediction, sheet, gap in zip(
+                    next_sheets, predictions, sheets, gaps))
         else:
             acceptable = False
 
