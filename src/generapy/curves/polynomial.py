@@ -13,7 +13,7 @@ def _polynomial_trim(ctx, coefficients, tolerance=None):
         while len(coefficients) > 1 and not coefficients[-1]:
             coefficients.pop()
     else:
-        scale = max([ctx.one] + [abs(value) for value in coefficients])
+        scale = max((abs(value) for value in coefficients), default=ctx.zero)
         while (len(coefficients) > 1
                and abs(coefficients[-1]) <= tolerance * scale):
             coefficients.pop()
@@ -53,22 +53,20 @@ def _polynomial_divmod(ctx, dividend, divisor, tolerance=None):
     """Divide ascending polynomials, trimming numerical roundoff."""
     if tolerance is None:
         tolerance = 100 * ctx.eps
-    dividend = list(_polynomial_trim(ctx, dividend, tolerance))
-    divisor = _polynomial_trim(ctx, divisor, tolerance)
+    # Degree is structural: small leading coefficients can encode large roots.
+    # Remove only exact zeros before division, and eliminate each degree once.
+    dividend = list(_polynomial_trim(ctx, dividend))
+    divisor = _polynomial_trim(ctx, divisor)
     if len(divisor) == 1 and not divisor[0]:
         raise ZeroDivisionError("polynomial division by zero")
     quotient = [ctx.zero] * max(1, len(dividend) - len(divisor) + 1)
-    while len(dividend) >= len(divisor):
-        degree = len(dividend) - len(divisor)
+    for degree in range(len(dividend) - len(divisor), -1, -1):
         coefficient = dividend[-1] / divisor[-1]
-        quotient[degree] += coefficient
-        for index, value in enumerate(divisor):
+        quotient[degree] = coefficient
+        for index, value in enumerate(divisor[:-1]):
             dividend[index + degree] -= coefficient * value
-        dividend = list(_polynomial_trim(ctx, dividend, tolerance))
-        if len(dividend) == 1 and abs(dividend[0]) <= tolerance:
-            dividend[0] = ctx.zero
-            break
-    return (_polynomial_trim(ctx, quotient, tolerance),
+        dividend.pop()
+    return (_polynomial_trim(ctx, quotient),
             _polynomial_trim(ctx, dividend, tolerance))
 
 
@@ -76,14 +74,14 @@ def _polynomial_exact_quotient(ctx, dividend, divisor):
     tolerance = ctx.sqrt(ctx.eps)
     quotient, remainder = _polynomial_divmod(
         ctx, dividend, divisor, tolerance=tolerance)
-    scale = max([ctx.one] + [abs(value) for value in dividend])
+    scale = max(abs(value) for value in dividend)
     if max(abs(value) for value in remainder) > tolerance * scale:
         raise ValueError("polynomial Bareiss division was not exact")
     return quotient
 
 
-def _polynomial_monic(ctx, coefficients, tolerance):
-    coefficients = _polynomial_trim(ctx, coefficients, tolerance)
+def _polynomial_monic(ctx, coefficients):
+    coefficients = _polynomial_trim(ctx, coefficients)
     if len(coefficients) == 1 and not coefficients[0]:
         return coefficients
     leading = coefficients[-1]
@@ -93,8 +91,8 @@ def _polynomial_monic(ctx, coefficients, tolerance):
 def _polynomial_gcd(ctx, left, right):
     """Return a numerical monic GCD of ascending polynomials."""
     tolerance = ctx.sqrt(ctx.eps)
-    left = _polynomial_monic(ctx, left, tolerance)
-    right = _polynomial_monic(ctx, right, tolerance)
+    left = _polynomial_monic(ctx, left)
+    right = _polynomial_monic(ctx, right)
     while not (len(right) == 1 and not right[0]):
         unused, remainder = _polynomial_divmod(
             ctx, left, right, tolerance=tolerance)
@@ -102,14 +100,14 @@ def _polynomial_gcd(ctx, left, right):
         if max(abs(value) for value in remainder) <= tolerance * scale:
             remainder = (ctx.zero,)
         left, right = right, _polynomial_monic(
-            ctx, remainder, tolerance)
+            ctx, remainder)
     return left
 
 
 def _polynomial_squarefree_part(ctx, coefficients):
     """Remove repeated factors from a univariate polynomial."""
     tolerance = ctx.sqrt(ctx.eps)
-    coefficients = _polynomial_trim(ctx, coefficients, tolerance)
+    coefficients = _polynomial_trim(ctx, coefficients)
     derivative = _polynomial_derivative(ctx, coefficients)
     divisor = _polynomial_gcd(ctx, coefficients, derivative)
     quotient, remainder = _polynomial_divmod(
@@ -117,7 +115,7 @@ def _polynomial_squarefree_part(ctx, coefficients):
     scale = max([ctx.one] + [abs(value) for value in coefficients])
     if max(abs(value) for value in remainder) > tolerance * scale:
         raise ValueError("failed to form squarefree critical polynomial")
-    return _polynomial_monic(ctx, quotient, tolerance)
+    return _polynomial_monic(ctx, quotient)
 
 
 def _polynomial_determinant(ctx, matrix):

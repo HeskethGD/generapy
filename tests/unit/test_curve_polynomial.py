@@ -191,3 +191,108 @@ def test_squarefree_part_rejects_an_inexact_numerical_gcd(monkeypatch):
         curve_polynomial, "_polynomial_gcd", lambda ctx, left, right: (0, 1))
     with pytest.raises(ValueError, match="failed to form squarefree"):
         _polynomial_squarefree_part(mp, (1, 0, 1))
+
+
+# Rational plane quintic from issues #27/#28.
+QUINTIC = {(0, 0): (49559, 2),
+ (0, 1): (21886, 1),
+ (0, 2): (-6464, 1),
+ (0, 3): (52, 1),
+ (1, 0): (-550865, 16),
+ (1, 1): (-2613, 4),
+ (1, 2): (274, 1),
+ (1, 3): (-7, 1),
+ (1, 4): (1, 1),
+ (2, 0): (30759, 4),
+ (2, 1): (-89, 1),
+ (2, 2): (11, 1),
+ (3, 0): (-234, 1),
+ (3, 1): (7, 1),
+ (3, 2): (-2, 1),
+ (4, 0): (-11, 1),
+ (5, 0): (1, 1)}
+
+# Exact rational Sylvester determinants (ascending powers), computed once.
+QUINTIC_RESULTANTS = (('0',
+  '111615690529817364800',
+  '918434156369595050960',
+  '-961243517847096784907',
+  '326580328999374637468',
+  '-45184024733282410994',
+  '2847244285126752592',
+  '-44205455077561271',
+  '-4774291003458180',
+  '306603818695708',
+  '-7129878605104',
+  '75781885136',
+  '-1360263040',
+  '27197184',
+  '47104',
+  '1024'),
+ ('-2428888288637614924754093375/256',
+  '707390327187421472948949305/64',
+  '-213244523896930734445651973/64',
+  '342713215832007926906249/16',
+  '358222654204638804319791/16',
+  '-872107483178416262913/2',
+  '-77111990183156031637/2',
+  '1041915141010559608',
+  '-18932707186354489',
+  '-100026190439588',
+  '33982015479212',
+  '-2109267758608',
+  '152852029136',
+  '-1499260800',
+  '27789056',
+  '28672',
+  '1024'))
+
+
+@pytest.mark.parametrize("digits", [15, 20, 30])
+@pytest.mark.parametrize("swap", [False, True])
+def test_quintic_resultant_preserves_small_leading_terms(digits, swap):
+    ctx = mp.clone()
+    ctx.dps = digits
+    curve = make_curve(ctx, {
+        (j, i) if swap else (i, j): ctx.mpf(p) / q
+        for (i, j), (p, q) in QUINTIC.items()})
+    branch = curve.branch_locus
+    exact = tuple(ctx.mpf(value) for value in QUINTIC_RESULTANTS[swap])
+    assert len(branch.resultant) == len(exact)
+    assert len(branch.branch_values) == len(exact) - 1
+    assert all(abs(got - expected) <= 1000 * ctx.eps * (abs(expected) or max(map(abs, exact)))
+               for got, expected in zip(branch.resultant, exact))
+    for root in branch.branch_values:
+        if not exact[0] and abs(root) < 1000 * ctx.eps:
+            continue
+        bound = ctx.fsum(abs(c) * abs(root)**i for i, c in enumerate(exact))
+        assert abs(ctx.polyval(exact, root, asc=True)) <= 1000 * ctx.eps * bound
+    assert ctx.dps == digits
+
+
+@pytest.mark.parametrize("scale", ["1e-20", "0.001", "1", "1e20", "0.001j"])
+def test_scaled_equation_preserves_genus_and_branch_values(scale):
+    ctx = mp.clone()
+    ctx.dps = 20
+    scale = ctx.mpc(scale)
+    curve = make_curve(ctx, {key: scale * value for key, value in
+                            {(4, 0): 1, (0, 4): 1, (0, 0): -1}.items()})
+    assert curve.genus == 3
+    branch = curve.branch_locus
+    assert len(branch.branch_values) == 4
+    assert all(min(abs(root - expected) for root in branch.branch_values)
+               < 1000 * ctx.eps for expected in (1, -1, 1j, -1j))
+    # Res(cF, cF_y) = c**7 Res(F, F_y); preserve public resultant scaling.
+    for power, value in enumerate(branch.resultant):
+        expected = {0: -256, 4: 768, 8: -768, 12: 256}.get(power, 0)
+        assert abs(value / scale**7 - expected) < 1000 * ctx.eps * 768
+
+
+def test_division_preserves_a_small_but_genuine_leading_coefficient():
+    ctx = mp.clone()
+    dividend = (ctx.one, ctx.mpf("1e-30"))
+    quotient, remainder = _polynomial_divmod(ctx, dividend, (ctx.one,))
+    assert quotient == dividend and remainder == (0,)
+    assert _polynomial_squarefree_part(ctx, dividend) == tuple(
+        value / dividend[-1] for value in dividend)
+
