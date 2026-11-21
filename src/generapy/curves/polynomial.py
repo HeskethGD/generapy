@@ -104,7 +104,7 @@ def _polynomial_gcd(ctx, left, right):
     return left
 
 
-def _polynomial_squarefree_part(ctx, coefficients):
+def _polynomial_squarefree_part(ctx, coefficients, *, remainder_tolerance=None):
     """Remove repeated factors from a univariate polynomial."""
     tolerance = ctx.sqrt(ctx.eps)
     coefficients = _polynomial_trim(ctx, coefficients)
@@ -112,8 +112,10 @@ def _polynomial_squarefree_part(ctx, coefficients):
     divisor = _polynomial_gcd(ctx, coefficients, derivative)
     quotient, remainder = _polynomial_divmod(
         ctx, coefficients, divisor, tolerance=tolerance)
-    scale = max([ctx.one] + [abs(value) for value in coefficients])
-    if max(abs(value) for value in remainder) > tolerance * scale:
+    scale = max(abs(value) for value in coefficients)
+    if remainder_tolerance is None:
+        remainder_tolerance = tolerance
+    if max(abs(value) for value in remainder) > remainder_tolerance * scale:
         raise ValueError("failed to form squarefree critical polynomial")
     return _polynomial_monic(ctx, quotient)
 
@@ -264,6 +266,10 @@ def _critical_polynomial_roots(ctx, coefficients):
 def _plane_curve_critical_values(ctx, curve):
     """Return distinct finite candidates from the y-resultant."""
     failure = None
+    # Numerical GCD detection uses sqrt(eps), but accepting its quotient at
+    # that tolerance can lose caller-visible digits. Retry if the division
+    # residual does not meet the caller's precision, even when roots converge.
+    remainder_tolerance = 100 * ctx.eps
     for extra_precision in (30, 60, 120):
         no_finite_polynomial = False
         try:
@@ -272,7 +278,8 @@ def _plane_curve_critical_values(ctx, curve):
                 if len(resultant) <= 1:
                     no_finite_polynomial = True
                 else:
-                    squarefree = _polynomial_squarefree_part(ctx, resultant)
+                    squarefree = _polynomial_squarefree_part(
+                        ctx, resultant, remainder_tolerance=remainder_tolerance)
                     roots = _critical_polynomial_roots(ctx, squarefree)
                     scale = max([ctx.one] + [abs(root) for root in roots])
                     tolerance = ctx.sqrt(ctx.eps) * scale
