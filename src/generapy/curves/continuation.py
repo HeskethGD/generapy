@@ -558,7 +558,7 @@ class _LiftedEdgeSampler:
     checks are numerical consistency tests, not a certification theorem.
     """
 
-    def __init__(self, ctx, curve, continuation):
+    def __init__(self, ctx, curve, continuation, *, input_tolerance=None):
         self.ctx = ctx
         self.curve = curve
         self.state = _curve_cache_state(ctx)
@@ -568,7 +568,10 @@ class _LiftedEdgeSampler:
             raise ValueError("a lifted edge must have distinct endpoints")
         parameters = tuple((x - self.left) / self.delta
                            for x in continuation.path)
-        tolerance = 100 * ctx.eps
+        # A stored lift may have been built at lower precision than node
+        # correction. Retain its input accuracy for geometric/label checks.
+        tolerance = 100 * ctx.eps if input_tolerance is None else input_tolerance
+        self.input_tolerance = tolerance
         if (any(abs(ctx.im(t)) > tolerance for t in parameters)
                 or any(ctx.re(a) >= ctx.re(b)
                        for a, b in itertools.pairwise(parameters))):
@@ -611,7 +614,7 @@ class _LiftedEdgeSampler:
                 initial_sheets=self.fibres[index], max_refinements=12)
             expected = self.fibres[index + 1]
             scale = max(ctx.one, *map(abs, expected))
-            if any(abs(u - v) > 10000 * ctx.eps * scale
+            if any(abs(u - v) > 100 * self.input_tolerance * scale
                    for u, v in zip(lift.fibres[-1], expected)):
                 raise ctx.NoConvergence("edge refinement changed the sheet labels")
             positions = [ctx.re((z - self.left) / self.delta) for z in lift.path[1:-1]]

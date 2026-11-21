@@ -382,3 +382,21 @@ def test_remote_pole_sheet_uses_its_own_separation_for_step_acceptance():
     assert result.steps == 1 and result.refinements == 0
     assert all(abs(got-want) < 1000*ctx.eps
                for got, want in zip(result.sheets, expected))
+
+
+def test_edge_sampler_can_correct_nodes_above_stored_lift_precision():
+    ctx = mp.clone()
+    ctx.dps = 20
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    start, end = ctx.mpc('1', '.2'), ctx.mpc('4', '.5')
+    path = tuple(start+(end-start)*i/32 for i in range(33))
+    lift = continuation._continue_plane_curve_sheets_adaptive(ctx, curve, path)
+    sheet = min(range(3), key=lambda i: abs(lift.fibres[0][i]-ctx.root(start, 3)))
+    input_tolerance = 100*ctx.eps
+    with ctx.extraprec(40):
+        sampler = continuation._LiftedEdgeSampler(
+            ctx, curve, lift, input_tolerance=input_tolerance)
+        x, y, residual = sampler.sample(ctx.mpf('.37'), sheet)
+        assert abs(y-ctx.root(x, 3)) < 1000*ctx.eps
+        assert residual < 1000*ctx.eps
+    assert ctx.dps == 20

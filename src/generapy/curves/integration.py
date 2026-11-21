@@ -219,15 +219,33 @@ def _straight_lifted_pieces(ctx, continuation):
 def _integrate_geometric_callable_path(
         ctx, curve, continuation, differentials, sheet, branch_values,
         rules, check_convergence, differential_evaluator):
+    # Newton correction and rational differentials can lose digits through
+    # cancellation on large-coefficient curves. Check against caller precision
+    # while evaluating nodes with guard bits, retaining the existing labels.
+    tolerance = 100 * ctx.eps
+    pieces = tuple(_straight_lifted_pieces(ctx, continuation))
+    with ctx.extraprec(40):
+        result = _integrate_geometric_callable_path_working(
+            ctx, curve, continuation, differentials, sheet, branch_values,
+            rules, check_convergence, differential_evaluator, tolerance, pieces)
+    if result is None:
+        return None
+    return result._replace(values=tuple(+value for value in result.values),
+                           max_sheet_residual=+result.max_sheet_residual)
+
+
+def _integrate_geometric_callable_path_working(
+        ctx, curve, continuation, differentials, sheet, branch_values,
+        rules, check_convergence, differential_evaluator, tolerance, lifted_pieces):
     """Integrate panels independently of the mesh used to label sheets.
 
     The existing fine continuation remains the sampler's branch reference.
     Opaque forms retain bounded successive-order checks on every panel.
     """
     samplers = []
-    for piece in _straight_lifted_pieces(ctx, continuation):
+    for piece in lifted_pieces:
         try:
-            sampler = _LiftedEdgeSampler(ctx, curve, piece)
+            sampler = _LiftedEdgeSampler(ctx, curve, piece, input_tolerance=tolerance)
         except ValueError:
             # Ill-scaled coordinates may obscure collinearity at this
             # precision. The original segment-by-segment route remains valid.
@@ -235,9 +253,10 @@ def _integrate_geometric_callable_path(
         samplers.append(sampler)
 
     def panel(sampler, lower, upper, order):
-        if order not in rules:
-            rules[order] = _gauss_legendre_rule(ctx, order)
-        parameters, weights = rules[order]
+        key = (ctx.prec, order)
+        if key not in rules:
+            rules[key] = _gauss_legendre_rule(ctx, order)
+        parameters, weights = rules[key]
         width = upper - lower
         terms = [[] for unused in differentials]
         residual = ctx.zero
@@ -269,7 +288,7 @@ def _integrate_geometric_callable_path(
                     residual = max(residual, error)
                     converged = all(
                         ctx.isfinite(a) and ctx.isfinite(b)
-                        and abs(a-b) <= 100 * ctx.eps * max(ctx.one, abs(b))
+                        and abs(a-b) <= tolerance * max(ctx.one, abs(b))
                         for a, b in zip(value, refined))
                     value, order = refined, larger
                     if converged:

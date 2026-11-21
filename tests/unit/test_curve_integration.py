@@ -452,7 +452,7 @@ def test_geometric_panel_sampler_can_fall_back_to_original_segments(monkeypatch)
     curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
     lift = _continue_plane_curve_sheets_adaptive(ctx, curve, (1, 4))
 
-    def unresolved_collinearity(*args):
+    def unresolved_collinearity(*args, **kwargs):
         raise ValueError('straight ordered path unresolved at this precision')
 
     monkeypatch.setattr(curve_integration, '_LiftedEdgeSampler', unresolved_collinearity)
