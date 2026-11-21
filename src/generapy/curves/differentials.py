@@ -1,4 +1,4 @@
-"""Newton-polygon first-kind differentials for nondegenerate plane curves."""
+"""Automatic first-kind differentials for supported plane curves."""
 
 from math import gcd
 
@@ -113,13 +113,24 @@ def _baker_basis(ctx, curve, genus):
     if genus == 0:
         raise ValueError("a genus-zero curve has no first-kind periods")
     polygon = _newton_polygon(curve)
-    _check_newton_edges(ctx, curve, polygon)
-    points = _interior_lattice_points(polygon)
-    if len(points) != genus:
-        raise ValueError(
-            "Newton interior-point count differs from the curve genus; "
-            "supply first-kind differentials")
-    numerators = tuple((x - 1, y - 1) for x, y in points)
+    try:
+        _check_newton_edges(ctx, curve, polygon)
+    except ValueError:
+        degree = max(x + y for x, y, unused in curve.terms)
+        if genus != (degree - 1) * (degree - 2) // 2:
+            raise
+        # For an irreducible plane curve with maximal geometric genus the
+        # projective model is smooth. Adjunction gives every monomial of
+        # total degree <= d-3, even if a Newton face has repeated roots.
+        numerators = tuple((x, y) for y in range(degree - 2)
+                           for x in range(degree - 2 - y))
+    else:
+        points = _interior_lattice_points(polygon)
+        if len(points) != genus:
+            raise ValueError(
+                "Newton interior-point count differs from the curve genus; "
+                "supply first-kind differentials")
+        numerators = tuple((x - 1, y - 1) for x, y in points)
     denominator_terms = tuple(
         (x, y - 1, y * coefficient)
         for x, y, coefficient in curve.terms if y)

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Automatic first-kind adjoint bases for smooth plane models whose computed
+  genus reaches the plane degree bound, even with a degenerate Newton edge
+  (#30).
+
 ### Fixed
 
 - Allow unramified sheet poles in radial monodromy diagnostics and use each

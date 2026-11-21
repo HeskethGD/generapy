@@ -46,3 +46,20 @@ def test_genus_zero_has_no_first_kind_basis():
     curve = _prepare_plane_curve(mp, {(0, 2): 1, (1, 0): -1})
     with pytest.raises(ValueError, match="genus-zero"):
         _baker_basis(mp, curve, 0)
+
+
+def test_smooth_plane_adjoint_basis_allows_a_degenerate_newton_face():
+    ctx = mp.clone()
+    curve = _prepare_plane_curve(ctx, {
+        (4, 0): 1, (2, 2): -2, (0, 4): 1,
+        (3, 0): 1, (0, 1): 1, (0, 0): 1})
+    basis = _baker_basis(ctx, curve, 3)
+    assert basis[0] == ((0, 0), (1, 0), (0, 1))
+    x, y = ctx.mpc('.2', '.3'), ctx.mpc('.6', '-.1')
+    denominator = 4*y**3 - 4*x*x*y + 1
+    assert all(ctx.almosteq(got, want) for got, want in zip(
+        _evaluate_baker_basis(ctx, basis, x, y),
+        (1/denominator, x/denominator, y/denominator)))
+    # A lower-genus normalization needs singularity conditions on adjoints.
+    with pytest.raises(ValueError, match="degenerate edge"):
+        _baker_basis(ctx, curve, 2)
