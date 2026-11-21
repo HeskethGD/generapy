@@ -764,27 +764,33 @@ def test_curve_result_records_are_public():
                    CurveRiemannConstant, CurveValidation))
 
 
-def test_critical_values_remove_repeated_resultant_factors():
-    mp.dps = 20
-    curve = _prepare_plane_curve(mp, {
+@pytest.mark.parametrize("digits", [20, 30, 50])
+@pytest.mark.parametrize("scale", ["1e-12", "1", "1e12"])
+def test_critical_values_remove_repeated_resultant_factors(digits, scale):
+    ctx = mp.clone()
+    ctx.dps = digits
+    terms = {
         (2, 4): 1,
         (3, 2): -4,
         (2, 2): 6,
         (1, 2): -2,
-        (2, 0): mp.mpf(27) / 5,
-        (1, 0): -mp.mpf(26) / 5,
+        (2, 0): ctx.mpf(27) / 5,
+        (1, 0): -ctx.mpf(26) / 5,
         (0, 0): 1,
-    })
-    points, resultant = _plane_curve_critical_values(mp, curve)
-    expected = tuple([mp.zero]
-                     + mp.polyroots([5, -26, 27], asc=True)
-                     + mp.polyroots([-2, 19, -30, 10], asc=True))
+    }
+    curve = _prepare_plane_curve(ctx, {key: ctx.mpf(scale) * value
+                                        for key, value in terms.items()})
+    points, resultant = _plane_curve_critical_values(ctx, curve)
+    expected = tuple([ctx.zero]
+                     + ctx.polyroots([5, -26, 27], asc=True)
+                     + ctx.polyroots([-2, 19, -30, 10], asc=True))
     assert len(resultant) - 1 == 18
     assert len(points) == 6
     assert max(min(abs(point - value) for value in expected)
-               for point in points) < mp.mpf("1e-17")
+               for point in points) < 100 * ctx.eps
     assert max(min(abs(point - reference) for point in points)
-               for reference in expected) < mp.mpf("1e-17")
+               for reference in expected) < 100 * ctx.eps
+    assert ctx.dps == digits
 
 
 def test_curve_chart_public_surface_and_ownership():
