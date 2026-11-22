@@ -15,30 +15,33 @@ and handles non-monic monodromy, scaled equations and difficult chart fibres
 more reliably. General-curve topology, periods, Abel maps and Riemann constants
 are faster, with substantial gains in the tested genus-four example. Existing
 public function signatures and coordinate conventions are retained.
+[Release baselines](https://github.com/HeskethGD/generapy/tree/v0.3.0/benchmarks/baselines/v0.3.0)
+record numerical agreement and timings against v0.2.0.
 
 ### Added
 
 - Automatic first-kind adjoint bases for smooth plane models whose computed
   genus reaches the plane degree bound, even with a degenerate Newton edge
-  (#30).
+  ([#30](https://github.com/HeskethGD/generapy/issues/30)).
 
 ### Changed
 
 - Accelerate general-curve topology, periods, Abel maps and Riemann constants
   with relative-motion continuation, shared basis evaluation, reusable connector
   integrals and independent quadrature panels. Retain sheet-label and precision
-  checks and the existing acceptance route for short paths (#33).
+  checks and the existing acceptance route for short paths ([#33](https://github.com/HeskethGD/generapy/issues/33)).
 
 ### Fixed
 
 - Allow unramified sheet poles in radial monodromy diagnostics and use each
-  sheet's own separation when refining continuation steps (#29).
+  sheet's own separation when refining continuation steps ([#29](https://github.com/HeskethGD/generapy/issues/29)).
 
 - Preserve genuine small polynomial coefficients during resultant division and
   squarefree reduction, and use relative trimming for scaled curve equations
-  (#27, #28).
+  ([#27](https://github.com/HeskethGD/generapy/issues/27),
+  [#28](https://github.com/HeskethGD/generapy/issues/28)).
 - Retry difficult chart fibres with conditioned root solving and guard precision,
-  retaining finite and large roots near a place at infinity (#34).
+  retaining finite and large roots near a place at infinity ([#34](https://github.com/HeskethGD/generapy/issues/34)).
 
 ## [0.2.0] - 2026-11-16
 

@@ -22,6 +22,27 @@ Each entry should include:
 
 <!-- Entries will be added as releases occur and optimizations are made -->
 
+### v0.3.0 release-candidate baselines (2026-11-22)
+
+**Reports:** [protocol and summary](baselines/v0.3.0/README.md),
+[numerical functions](baselines/v0.3.0/theta_and_ba.md),
+[curve periods](baselines/v0.3.0/curve_periods.md), and
+[genus-four pipeline](baselines/v0.3.0/general_curve_pipeline.md).
+
+The complete matched suite compared published v0.2.0 (`cd98830`) with
+`a688d64`, using seven numerical samples and three fresh-process curve trials
+per revision. All 268 configurations passed, including both expected singular
+rejections. Geometric-mean candidate/reference ratios were 0.992 for genus
+one, 0.976 for theta, 0.991 for jets, 0.985 for BA and 0.996 for curve periods.
+All 26 catalogue curves ran at 30/50 digits; no external tools were launched.
+
+The largest initial increase, theta g2-coupled/half at 30 digits (1.107), was
+rechecked with 31 samples and reversed order: 1.008. Initial results remain
+in the reports. The unchanged evaluator groups show timing variation; their
+apparent improvements are not attributed to this release's code changes.
+The separate genus-four profile retains its actual development revisions,
+which have the same numerical implementation as this release candidate.
+
 ### Unreleased: completed general-curve performance pass (#33, 2026-11-22)
 
 The continuation follow-up compares the previous quadrature checkpoint

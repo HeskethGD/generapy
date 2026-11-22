@@ -18,7 +18,9 @@ benchmarks/
 
 ## Prerequisites
 
-The [v0.2.0 pre-release record](baselines/v0.2.0/README.md) contains matched
+The [v0.3.0 release-candidate baselines](baselines/v0.3.0/README.md) compare
+all established workloads against the published v0.2.0 tag and include the
+genus-four pipeline profile. The [v0.2.0 pre-release record](baselines/v0.2.0/README.md) contains matched
 Generapy revision comparisons and context against the saved v0.1.0 timings.
 The [integration follow-up](baselines/v0.2.0/integration.md) records the later
 chart and finite-base Abel profiling and optimizations for issues #9/#10.
