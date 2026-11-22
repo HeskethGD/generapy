@@ -77,3 +77,27 @@ def test_radial_monodromy_rejects_inconsistent_continuation_data(
         curve_monodromy, "_continue_plane_curve_sheets_adaptive", faulty)
     with pytest.raises(ValueError, match=message):
         _radial_plane_curve_monodromy(ctx, curve, (0,), circle_steps=8)
+
+
+@pytest.mark.parametrize("digits", [15, 30])
+def test_non_monic_monodromy_retains_unramified_pole_generator(digits):
+    ctx = mp.clone()
+    ctx.dps = digits
+    curve = make_curve(ctx, {(1, 2): 1, (0, 1): 1, (3, 0): -1, (0, 0): 1})
+    result = curve.monodromy
+    pole_index = min(range(len(result.branch_values)),
+                     key=lambda i: abs(result.branch_values[i]))
+    assert abs(result.branch_values[pole_index]) < 100 * ctx.eps
+    assert result.permutations[pole_index] == (0, 1)
+    assert result.genus == 1 and result.ramification == 4
+    assert result.product_identity and result.transitive
+
+
+def test_degree_drop_can_still_be_ramified():
+    # y = +/- 1/sqrt(x) exchanges sheets around x=0.
+    ctx = mp.clone()
+    result = make_curve(ctx, {(1, 2): 1, (0, 0): -1}).monodromy
+    assert result.permutations == ((1, 0),)
+    assert result.infinity_permutation == (1, 0)
+    assert result.genus == 0 and result.ramification == 2
+    assert result.product_identity and result.transitive

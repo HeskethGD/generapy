@@ -24,6 +24,9 @@ from .polynomial import (
     _ordered_plane_curve_sheets,
     _plane_curve_sheets,
     _plane_curve_sheet_separation_bound,
+    _plane_polynomial_y_coefficients_with_x_derivative,
+    _polynomial_derivative,
+    _polynomial_trim,
 )
 
 # Base-plane paths
@@ -140,11 +143,13 @@ def _predict_plane_curve_sheets(ctx, curve, x, next_x, sheets):
     step = next_x - x
     predictions = []
     threshold = ctx.sqrt(ctx.eps)
+    coefficients, derivative_x_coefficients = (
+        _plane_polynomial_y_coefficients_with_x_derivative(ctx, curve, x))
+    derivative_x_coefficients = _polynomial_trim(ctx, derivative_x_coefficients)
+    derivative_y_coefficients = _polynomial_derivative(ctx, coefficients)
     for sheet in sheets:
-        derivative_x = _evaluate_plane_derivative(
-            ctx, curve, x, sheet, "x")
-        derivative_y = _evaluate_plane_derivative(
-            ctx, curve, x, sheet, "y")
+        derivative_x = ctx.polyval(derivative_x_coefficients, sheet, asc=True)
+        derivative_y = ctx.polyval(derivative_y_coefficients, sheet, asc=True)
         scale = max(ctx.one, abs(derivative_x), abs(derivative_y))
         if abs(derivative_y) <= threshold * scale:
             predictions.append(sheet)
@@ -167,8 +172,9 @@ def _continue_plane_curve_sheets_adaptive(
         correction_fraction=None, motion_fraction=None):
     """Continue sheets while bisecting numerically unsafe path segments.
 
-    Acceptance compares prediction error and sheet motion with the local
-    minimum sheet separation.  Geometry remains the caller's responsibility:
+    Acceptance compares prediction error with each sheet's nearest-neighbour
+    separation and limits changes in pairwise gaps. Common translation of
+    sheets does not force subdivision. Geometry remains the caller's responsibility:
     subdivision improves resolution but cannot repair a path through a
     critical value.
 
@@ -231,17 +237,32 @@ def _continue_plane_curve_sheets_adaptive(
             assignment = _minimum_cost_assignment(
                 ctx, predictions, candidates)
             next_sheets = tuple(candidates[index] for index in assignment)
-            separation = min(
-                _minimum_root_separation(ctx, sheets),
-                _minimum_root_separation(ctx, next_sheets))
             correction = max(
                 abs(value - prediction)
                 for value, prediction in zip(next_sheets, predictions))
-            motion = max(abs(value - sheet)
-                         for value, sheet in zip(next_sheets, sheets))
-            acceptable = (
-                correction <= correction_fraction * separation
-                and motion <= motion_fraction * separation)
+            # Limit relative motion, so translating a close group of sheets
+            # together does not require steps at the scale of their small gap.
+            # Cross-group pairs still constrain their approach or separation.
+            gaps = [ctx.inf] * len(sheets)
+            motion_ok = True
+            for i in range(len(sheets)):
+                for j in range(i):
+                    before = sheets[i] - sheets[j]
+                    after = next_sheets[i] - next_sheets[j]
+                    gap = min(abs(before), abs(after))
+                    gaps[i] = min(gaps[i], gap)
+                    gaps[j] = min(gaps[j], gap)
+                    if abs(after - before) > motion_fraction * gap:
+                        motion_ok = False
+            separation = min(gaps)
+            # Preserve every step accepted by the original absolute-motion
+            # check; the relative check additionally permits shared motion.
+            absolute_motion_ok = all(
+                abs(value - sheet) <= motion_fraction * gap
+                for value, sheet, gap in zip(next_sheets, sheets, gaps))
+            acceptable = (absolute_motion_ok or motion_ok) and all(
+                abs(value - prediction) <= correction_fraction * gap
+                for value, prediction, gap in zip(next_sheets, predictions, gaps))
         else:
             acceptable = False
 
@@ -554,7 +575,7 @@ class _LiftedEdgeSampler:
     checks are numerical consistency tests, not a certification theorem.
     """
 
-    def __init__(self, ctx, curve, continuation):
+    def __init__(self, ctx, curve, continuation, *, input_tolerance=None):
         self.ctx = ctx
         self.curve = curve
         self.state = _curve_cache_state(ctx)
@@ -564,7 +585,10 @@ class _LiftedEdgeSampler:
             raise ValueError("a lifted edge must have distinct endpoints")
         parameters = tuple((x - self.left) / self.delta
                            for x in continuation.path)
-        tolerance = 100 * ctx.eps
+        # A stored lift may have been built at lower precision than node
+        # correction. Retain its input accuracy for geometric/label checks.
+        tolerance = 100 * ctx.eps if input_tolerance is None else input_tolerance
+        self.input_tolerance = tolerance
         if (any(abs(ctx.im(t)) > tolerance for t in parameters)
                 or any(ctx.re(a) >= ctx.re(b)
                        for a, b in itertools.pairwise(parameters))):
@@ -607,7 +631,7 @@ class _LiftedEdgeSampler:
                 initial_sheets=self.fibres[index], max_refinements=12)
             expected = self.fibres[index + 1]
             scale = max(ctx.one, *map(abs, expected))
-            if any(abs(u - v) > 10000 * ctx.eps * scale
+            if any(abs(u - v) > 100 * self.input_tolerance * scale
                    for u, v in zip(lift.fibres[-1], expected)):
                 raise ctx.NoConvergence("edge refinement changed the sheet labels")
             positions = [ctx.re((z - self.left) / self.delta) for z in lift.path[1:-1]]

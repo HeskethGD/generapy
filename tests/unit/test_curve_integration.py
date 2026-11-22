@@ -396,3 +396,132 @@ def test_chart_quadrature_refines_an_ambiguous_node_on_the_correct_branch():
     # This deliberately coarse panel tests branch selection, not the
     # accuracy of a fixed quadrature rule at a nearby complex singularity.
     assert abs(integral.values[0]-reference) < ctx.mpf('1e-8')
+
+
+@pytest.mark.parametrize('digits', [20, 40])
+def test_geometric_quadrature_is_independent_of_continuation_mesh_density(digits):
+    ctx = mp.clone()
+    ctx.dps = digits
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    path = tuple(1+ctx.mpf(3)*i/128 for i in range(129))
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, path)
+    sheet = min(range(3), key=lambda i: abs(lift.fibres[0][i]-1))
+    samples = []
+
+    def form(x, y):
+        samples.append(x)
+        return 1/(3*y*y)  # dy/dx on y**3=x.
+
+    result = _integrate_plane_curve_path(
+        ctx, curve, lift, (form,), sheet=sheet,
+        quadrature_order='geometry', branch_values=(0,), check_convergence=True)
+    assert abs(result.values[0]-(ctx.root(4, 3)-1)) < 1000*ctx.eps
+    assert len(samples) < 4*len(path)
+    assert result.segments == lift.steps
+
+
+def test_geometric_panels_preserve_corners_winding_and_sheet_labels():
+    ctx = mp.clone()
+    ctx.dps = 25
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    corners = tuple(ctx.exp(2*ctx.j*ctx.pi*i/12) for i in range(13))
+    path = tuple(a+(b-a)*j/32 for a, b in zip(corners, corners[1:])
+                 for j in range(32)) + (corners[-1],)
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, path)
+    sheet = min(range(3), key=lambda i: abs(lift.fibres[0][i]-1))
+    result = _integrate_plane_curve_path(
+        ctx, curve, lift, (lambda x, y: 1/x, lambda x, y: 1/(3*y*y)),
+        sheet=sheet, quadrature_order='geometry', branch_values=(0,),
+        check_convergence=True)
+    assert abs(result.values[0]-2*ctx.j*ctx.pi) < 1000*ctx.eps
+    assert abs(result.values[1]-(lift.fibres[-1][sheet]-1)) < 1000*ctx.eps
+
+
+def test_geometric_panels_still_reject_an_unmodelled_nearby_pole():
+    ctx = mp.clone()
+    ctx.dps = 25
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    path = tuple(1+ctx.mpf(3)*i/128 for i in range(129))
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, path)
+    with pytest.raises(ctx.NoConvergence, match='path quadrature'):
+        _integrate_plane_curve_path(
+            ctx, curve, lift, (lambda x, y: 1/(x-ctx.mpc('2.5', '.001')),),
+            quadrature_order='geometry', branch_values=(0,), check_convergence=True)
+
+
+def test_geometric_panel_sampler_can_fall_back_to_original_segments(monkeypatch):
+    ctx = mp.clone()
+    ctx.dps = 25
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    path = tuple(1+ctx.mpf(3)*i/128 for i in range(129))
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, path)
+
+    def unresolved_collinearity(*args, **kwargs):
+        raise ValueError('straight ordered path unresolved at this precision')
+
+    monkeypatch.setattr(curve_integration, '_LiftedEdgeSampler', unresolved_collinearity)
+    result = _integrate_plane_curve_path(
+        ctx, curve, lift, (lambda x, y: 1,),
+        quadrature_order='geometry', branch_values=(0,))
+    assert abs(result.values[0]-3) < 1000*ctx.eps
+
+
+def test_coarse_common_motion_keeps_guarded_geometric_integration():
+    ctx = mp.clone()
+    ctx.dps = 30
+    curve = _prepare_plane_curve(ctx, {
+        (0, 4): 1, (2, 2): -2, (0, 2): -2,
+        (4, 0): 1, (2, 0): -2, (0, 0): 1})
+    lift = _continue_plane_curve_sheets_adaptive(
+        ctx, curve, (100, 110), initial_sheets=(-101, -99, 99, 101),
+        max_refinements=0)
+
+    def form(x, y):
+        return 1/curve_integration._evaluate_plane_derivative(ctx, curve, x, y, 'y')
+
+    result = _integrate_plane_curve_path(
+        ctx, curve, lift, (form,), sheet=3, quadrature_order='geometry',
+        branch_values=(-1, 0, 1), check_convergence=True)
+    # On y=x+1, F_y=8*x*(x+1).
+    exact = ctx.log(ctx.mpf(110)*101/(111*100))/8
+    assert abs(result.values[0]-exact) < 1000*ctx.eps
+    assert ctx.dps == 30
+
+
+def test_normalized_iterated_integrals_evaluate_each_basis_form_once_per_node():
+    ctx = mp.clone()
+    ctx.dps = 30
+    curve = _prepare_plane_curve(ctx, {(0, 2): 1, (1, 0): -1})
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, (1, 4))
+    calls = [0, 0]
+
+    def first(x, y):
+        calls[0] += 1
+        return ctx.one
+
+    def second(x, y):
+        calls[1] += 1
+        return x
+
+    forms = (first, second)
+    evaluate = curve_jacobian._normalized_basis_evaluator(ctx, forms, ctx.matrix([[1, 2], [3, 5]]))
+    result = _integrate_plane_curve_path_iterated(
+        ctx, curve, lift, forms, sheet=1, quadrature_order=24,
+        differential_evaluator=evaluate)
+    assert calls == [24*lift.steps, 24*lift.steps]
+    assert abs(result.values[0]) < 1000*ctx.eps
+    assert abs(result.values[1]-ctx.mpf(3)/2) < 1000*ctx.eps
+    expected = ((0, ctx.mpf(9)/4), (-ctx.mpf(9)/4, ctx.mpf(9)/8))
+    assert all(abs(a-b) < 10000*ctx.eps for row, want in zip(result.iterated, expected)
+               for a, b in zip(row, want))
+
+
+def test_iterated_integral_validates_shared_evaluation():
+    ctx = mp.clone()
+    curve = _prepare_plane_curve(ctx, {(0, 2): 1, (1, 0): -1})
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, (1, 2))
+    for evaluator, message in ((1, 'must be callable'),
+                               (lambda x, y: (1, 2), 'wrong number of values')):
+        with pytest.raises(ValueError, match=message):
+            _integrate_plane_curve_path_iterated(
+                ctx, curve, lift, (lambda x, y: 1,), differential_evaluator=evaluator)

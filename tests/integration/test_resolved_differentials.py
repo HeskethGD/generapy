@@ -194,3 +194,27 @@ def test_hyperelliptic_resolution_is_lazy_and_precision_is_explicit(monkeypatch)
     assert old.working_precision < new.working_precision == ctx.prec
     assert old.numerators[1][0][2] != new.numerators[1][0][2]
     assert_close(ctx, new.numerators[1][0][2], ctx.mpf(leading)/4)
+
+
+def test_smooth_quartic_with_repeated_newton_face_matches_supplied_periods():
+    ctx = mp.clone()
+    ctx.dps = 20
+    terms = {(4, 0): 1, (2, 2): -2, (0, 4): 1,
+             (3, 0): 1, (0, 1): 1, (0, 0): 1}
+    curve = Curve(terms, ctx=ctx)
+    basis = curve.resolved_differentials_kind_1()
+    assert basis.source == 'automatic' and basis.engine == 'general'
+    assert basis.numerators == (((0, 0, 1),), ((1, 0, 1),), ((0, 1, 1),))
+    assert curve.genus == 3
+
+    def fy(x, y):
+        return 4*y**3 - 4*x*x*y + 1
+
+    supplied = Curve(terms, differentials_kind_1=(
+        lambda x, y: 1/fy(x, y), lambda x, y: x/fy(x, y),
+        lambda x, y: y/fy(x, y)), ctx=ctx)
+    automatic, explicit = curve.periods_kind_1(), supplied.periods_kind_1()
+    for name in ('omega', 'omega_prime', 'tau'):
+        assert ctx.norm(getattr(automatic, name)-getattr(explicit, name)) < 10000*ctx.eps
+    eigenvalues = ctx.eigsy(automatic.tau.apply(ctx.im), eigvals_only=True)
+    assert min(eigenvalues) > 0

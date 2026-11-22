@@ -22,6 +22,150 @@ Each entry should include:
 
 <!-- Entries will be added as releases occur and optimizations are made -->
 
+### Unreleased: completed general-curve performance pass (#33, 2026-11-22)
+
+The continuation follow-up compares the previous quadrature checkpoint
+(`e6d000b`, remeasured) with completed source `0fc6ebc` on the same issue #33
+quintic, supplied basis, points and 20-digit protocol described below.
+Both revisions ran sequentially from isolated committed snapshots on the same
+machine. The initial pre-PR timings remain included for context; these are
+focused issue measurements, not a comprehensive release baseline.
+
+| Operation (seconds) | Pre-PR main | Previous checkpoint | Completed branch |
+| --- | ---: | ---: | ---: |
+| Cold genus/cover setup | 41.02 | 42.17 | 1.65 |
+| First-kind periods after genus | 155.51 | 12.75 | 10.87 |
+| First Abel call after periods | 43.29 | 7.75 | 2.23 |
+| Repeated Abel call | 43.42 | 6.84 | 1.37 |
+| Nearby-point Abel call | 43.06 | 6.82 | 1.37 |
+
+Repeated Abel calls improve about 5x over the previous checkpoint and 32x
+over pre-PR main. Cold cover setup improves about 25x. Observed genus plus
+period setup totals about 12.5 s, versus 54.9 s at the previous checkpoint
+and 196.5 s before the PR.
+
+The main change permits close groups of sheets to translate together without
+forcing subdivision at the scale of their internal gaps. Prediction-error
+and nearest-neighbour checks remain, the original absolute-motion acceptance
+is retained, and the additional route constrains changes in every pairwise
+sheet difference. Implicit-derivative coefficient setup is shared per fibre.
+The ordinary integration policy recognizes newly coarse shared-motion lifts
+and retains guarded node evaluation for them.
+
+The representative open lift now has 46 intervals instead of 1,079;
+continuation falls from about 5.7 s to 0.21 s. Open-path integration remains
+about 1.16 s. Paths, base-point conventions and raw Abel representatives are
+preserved: sampled Abel values agree with the previous checkpoint within
+`2.1e-22`, and the 20-/30-digit comparisons remain within `2.5e-22`.
+
+Riemann constants after warmed periods take 6.80 s at 20 digits and 10.32 s
+at 30 digits. Shared normalization evaluates the original basis once per
+node, reducing this stage from 13.93 s with the same relative-motion cover
+(`65923f5`). Returned Riemann-constant vectors are bit-for-bit identical to
+that version at both precisions. Riemann vanishing for the repeated effective
+divisor `3*P` was checked on all five sheets: scaled residuals are below
+`9e-20` at 20 digits and `1.6e-29` at 30 digits. At both precisions, Im(tau) remains positive-definite,
+and base-point subtraction agrees.
+
+Radial monodromy on the monic quintic takes 4.21 s; the original non-monic
+presentation takes 3.27 s. Both return genus four, transitive actions and
+identity products, with total ramification 16 and 14 respectively. These
+new monodromy and Riemann timings have no freshly matched pre-PR baseline;
+they should not be compared as controlled speed ratios to the issue's
+historical figures.
+
+A balanced Fermat-quartic control ran four process blocks per revision, each
+with six warm batches of four Abel maps. Warm medians are 0.1492 s before
+and 0.1505 s after (24 samples each); ranges are 0.1469–0.1547 s and
+0.1483–0.1780 s. The small-case cost remains approximately 0.15 s.
+
+Validation: 537 curve tests pass, repository-wide lint and whitespace checks
+pass, and the HTML documentation builds with warnings treated as errors.
+The genus-four marked-period regression runs at both 20 and 30 digits.
+
+The original cold-cover, repeated-continuation and iterated-integration
+follow-up areas have now been addressed and measured. Further changes to
+custom-basis representation would be a separate feature, rather than work
+required to finish issue #33.
+
+### Unreleased: measured genus-four pipeline improvements (#33, 2026-11-22)
+
+Compared committed snapshots of pre-PR main (`b8c8f02`), connector caching
+(`79c4add`) and the final integration policy (`e6d000b`) on the actual
+[issue #33 spectral quintic](https://github.com/HeskethGD/generapy/issues/33).
+The rational polynomial is coordinate-swapped to be monic in y, with the four
+supplied first-kind forms from the issue. No polynomial workaround is used.
+
+Each revision ran in an isolated process on the same macOS ARM64 machine,
+Python 3.14.7 and mpmath 1.4.1, at 20 decimal digits. Source snapshots were
+unchanged while timing; no other benchmark instances ran concurrently.
+One cold genus setup was followed by periods, an Abel map to
+`fibre(3.3+1.7j)[0]`, the identical request, and a nearby target
+`fibre(3.31+1.71j)[0]`. Abel reduction was disabled. These are focused single-run
+issue measurements, not a comprehensive release baseline.
+
+| Operation (seconds) | Pre-PR main | Connector cache | Final policy |
+| --- | ---: | ---: | ---: |
+| Cold genus/cover setup | 41.02 | 42.42 | 41.62 |
+| First-kind periods after genus | 155.51 | 154.78 | 12.59 |
+| First Abel call after periods | 43.29 | 43.22 | 7.73 |
+| Repeated Abel call | 43.42 | 21.34 | 6.76 |
+| Nearby-point Abel call | 43.06 | 21.38 | 6.80 |
+
+The final policy reduces period integration after setup by about 12.4x and
+repeated Abel evaluation by about 6.4x. Including cold genus setup, obtaining
+periods falls from about 197 s to 54 s. Connector reuse removes roughly 22 s
+per repeated call. The remaining open lift has 1,079 continuation intervals;
+quadrature now uses panels on its straight spans, retaining those fine
+samples for branch labels. Guarded node evaluation meets caller-precision
+convergence checks. Short spans keep their existing integration route.
+
+Final Abel values differ from pre-PR main by less than `2.1e-22`. A 30-digit
+reference at `2d143b9` (the guarded panel integrator before short-path
+selection) differs from the final 20-digit Abel values by at most `2.5e-22`.
+Scaled matrix differences, using norm(error)/max(1,norm(reference)), are below
+`5e-21` for the two half-period matrices and `2.3e-20` for tau. The imaginary
+part of tau is positive-definite at both precisions. Base-point subtraction
+has residual below `2e-22` at 20 digits and `2.2e-32` in the reference run.
+
+A matched Fermat-quartic control compared `79c4add` with `e6d000b`: four
+process blocks per revision in alternating order, each with one initial batch
+and six warm batches of four Abel maps. Pooled warm medians are 0.1487 s and
+0.1491 s. All 24 warm samples per revision are retained; ranges were
+0.1475–0.1778 s and 0.1481–0.2508 s, respectively. The large short-path
+penalty seen during development is avoided; this control shows no material
+median change, with some timing variability.
+
+Validation includes 528 passing curve tests and a warnings-as-errors HTML
+build, with regressions for mesh-density independence, winding and sheet
+labels, stored-lift precision, and nearby-pole rejection.
+
+Remaining work is separate: cold cover construction still takes about 42 s,
+and full-fibre open continuation accounts for about 5.7 s of each 6.8 s warm
+Abel call. Riemann-constant iterated integration and radial monodromy were
+not remeasured or optimized by this integration change. Further reductions
+there should be profiled and tracked as specific follow-ups.
+
+### Unreleased: geometric Abel connector reuse (#33, 2026-11-21)
+
+Exploratory measurements on the Fermat quartic at 20 decimal digits compared
+three batches of four first-kind Abel maps, one point per sheet at
+`x = 1.2 + 0.3j`. Period setup was warmed before timing. The initial batch
+warmed connector integrals; the next two batches measured repeated calls.
+No source edits or other benchmark instances ran during either measurement.
+These were development working-tree experiments, not a release baseline.
+
+Warm batches fell from a median 0.313 s to 0.153 s, about 2.0x faster.
+Connector integrations fell from 15 per warm batch to zero; all four open
+paths were still integrated. Initial batches took 0.344 s before and 0.330 s
+after. All returned value strings matched before and after at 20 digits.
+
+The bounded cache stores immutable edge-integral vectors, separated by curve,
+first- and second-kind bases, context and numerical state. Unhashable bases
+retain operation-local reuse. This addresses repeated connector integration
+only: the reported genus-four case, full-fibre open continuation, periods and
+Riemann constants still need separate profiling. Issue #33 remains partial.
+
 ### v0.2.0 pre-release: shared integration work for #9/#10 (2026-11-16)
 
 **Report:** [complete integration results and protocol](baselines/v0.2.0/integration.md).

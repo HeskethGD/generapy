@@ -364,3 +364,99 @@ def test_edge_sampler_rejects_refinement_that_changes_sheet_labels(monkeypatch):
         continuation, "_continue_plane_curve_sheets_adaptive", changed_labels)
     with pytest.raises(ctx.NoConvergence, match="changed the sheet labels"):
         sampler.sample(ctx.mpf('.5'), 1)
+
+
+def test_remote_pole_sheet_uses_its_own_separation_for_step_acceptance():
+    ctx = mp.clone()
+    ctx.dps = 25
+    # (y**2-x)*(x*y-1): a close pair +/-sqrt(x), and a remote pole 1/x.
+    # The pole moves much farther than the close pair's separation allows,
+    # but by a small fraction of its own separation from either neighbour.
+    curve = _prepare_plane_curve(ctx, {(1, 3): 1, (0, 2): -1,
+                                       (2, 1): -1, (1, 0): 1})
+    left, right = ctx.mpf('.01'), ctx.mpf('.01001')
+    sheets = (-ctx.sqrt(left), ctx.sqrt(left), 1/left)
+    result = continuation._continue_plane_curve_sheets_adaptive(
+        ctx, curve, (left, right), initial_sheets=sheets, max_refinements=0)
+    expected = (-ctx.sqrt(right), ctx.sqrt(right), 1/right)
+    assert result.steps == 1 and result.refinements == 0
+    assert all(abs(got-want) < 1000*ctx.eps
+               for got, want in zip(result.sheets, expected))
+
+
+def test_edge_sampler_can_correct_nodes_above_stored_lift_precision():
+    ctx = mp.clone()
+    ctx.dps = 20
+    curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    start, end = ctx.mpc('1', '.2'), ctx.mpc('4', '.5')
+    path = tuple(start+(end-start)*i/32 for i in range(33))
+    lift = continuation._continue_plane_curve_sheets_adaptive(ctx, curve, path)
+    sheet = min(range(3), key=lambda i: abs(lift.fibres[0][i]-ctx.root(start, 3)))
+    input_tolerance = 100*ctx.eps
+    with ctx.extraprec(40):
+        sampler = continuation._LiftedEdgeSampler(
+            ctx, curve, lift, input_tolerance=input_tolerance)
+        x, y, residual = sampler.sample(ctx.mpf('.37'), sheet)
+        assert abs(y-ctx.root(x, 3)) < 1000*ctx.eps
+        assert residual < 1000*ctx.eps
+    assert ctx.dps == 20
+
+
+def test_shared_horner_predictor_matches_sparse_implicit_derivatives():
+    ctx = mp.clone()
+    ctx.dps = 40
+    curve = _prepare_plane_curve(ctx, {(0, 4): 1, (2, 3): 2,
+                                       (3, 1): -3, (2, 0): 7, (0, 0): -2})
+    x, end = ctx.mpc('.7', '.2'), ctx.mpc('.71', '.22')
+    sheets = tuple(ctx.mpc(a, b) for a, b in [(1, 2), (2, -1), (3, 1), (-1, -2)])
+    expected = tuple(y-continuation._evaluate_plane_derivative(ctx, curve, x, y, 'x')
+                     *(end-x)/continuation._evaluate_plane_derivative(ctx, curve, x, y, 'y')
+                     for y in sheets)
+    got = continuation._predict_plane_curve_sheets(ctx, curve, x, end, sheets)
+    assert all(abs(a-b) < 100*ctx.eps*max(1, abs(b)) for a, b in zip(got, expected))
+
+
+def test_common_motion_of_close_sheet_groups_does_not_force_subdivision():
+    ctx = mp.clone()
+    ctx.dps = 25
+    # ((y-x)**2-1)*((y+x)**2-1): two close pairs translate in opposite
+    # directions. Each pair's internal gap stays fixed, and the change in
+    # cross-pair gaps is small relative to their large separation.
+    curve = _prepare_plane_curve(ctx, {
+        (0, 4): 1, (2, 2): -2, (0, 2): -2,
+        (4, 0): 1, (2, 0): -2, (0, 0): 1})
+    result = continuation._continue_plane_curve_sheets_adaptive(
+        ctx, curve, (100, 110), initial_sheets=(-101, -99, 99, 101),
+        max_refinements=0)
+    assert result.steps == 1 and result.refinements == 0
+    assert all(abs(a-b) < 10000*ctx.eps for a, b in
+               zip(result.sheets, (-111, -109, 109, 111)))
+
+
+def test_implicit_sheet_translation_preserves_labels_and_continuation_work():
+    ctx = mp.clone()
+    ctx.dps = 40
+    # Translate the irreducible cover y**3=x by y -> y+20*x.
+    base = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    shifted = _prepare_plane_curve(ctx, {
+        (0, 3): 1, (1, 2): -60, (2, 1): 1200,
+        (3, 0): -8000, (1, 0): -1})
+    path = tuple(map(ctx.convert, (1, 1+1j, 2, 1)))
+    original = continuation._continue_plane_curve_sheets_adaptive(ctx, base, path)
+    translated = continuation._continue_plane_curve_sheets_adaptive(
+        ctx, shifted, path,
+        initial_sheets=tuple(20+value for value in original.fibres[0]))
+    assert translated.permutation == original.permutation
+    assert translated.steps <= original.steps + 2
+    assert all(abs(a-(20+b)) < 10000*ctx.eps*20
+               for a, b in zip(translated.sheets, original.sheets))
+
+
+def test_absolute_motion_safe_steps_keep_their_original_acceptance():
+    ctx = mp.clone()
+    ctx.dps = 25
+    curve = _prepare_plane_curve(ctx, {(0, 2): 1, (1, 0): -1})
+    result = continuation._continue_plane_curve_sheets_adaptive(
+        ctx, curve, (1, 2), initial_sheets=(-1, 1), max_refinements=0)
+    assert result.steps == 1 and result.refinements == 0
+    assert result.sheets == (-ctx.sqrt(2), ctx.sqrt(2))

@@ -21,7 +21,8 @@ Conventions
 **Baker basis.** For supported hyperelliptic curves, the automatic first-kind
 basis consists of monomials :math:`x^k dx/z`. For a general curve, automatic
 holomorphic forms are selected from interior Newton-polygon points when the
-edge and genus checks pass. Otherwise the caller supplies a basis.
+edge and genus checks pass, with a smooth plane-curve fallback described
+below. Otherwise the caller supplies a basis.
 
 **BEL conventions.** The automatic hyperelliptic second-kind basis and
 half-period signs follow [BEL1997]_. The returned ``kappa`` is compatible with
@@ -127,7 +128,7 @@ Geometric polygon engine
 The geometric engine computes topology, first-kind periods, Riemann constants,
 and Abel maps for supported plane curves. It constructs a holomorphic basis
 from the sparse polynomial for irreducible models **nondegenerate with respect
-to their Newton polygon**.
+to their Newton polygon**, with an additional smooth plane-curve fallback.
 
 The Newton polygon is the convex hull of exponent pairs with nonzero
 coefficients. Nondegeneracy means that the polynomial and each edge polynomial
@@ -153,6 +154,14 @@ computed without supplying differential callables::
    (3, 'geometric-polygon')
    >>> curve.validate(first).passed
    True
+
+If a Newton edge is degenerate but the computed genus equals
+:math:`(d-1)(d-2)/2`, where :math:`d` is the total plane degree, the engine
+instead uses the smooth plane-curve adjoint basis [McMullenRS]_. Its forms are
+:math:`x^i y^j\,dx/F_y` for :math:`i+j\le d-3`, ordered first by :math:`j`
+and then by :math:`i`. This includes smooth curves with repeated roots in a
+Newton face. Lower-genus models with degenerate edges still require supplied
+forms; general adjoint conditions at singularities are not constructed.
 
 **Second-kind construction is not automatic in this engine.**
 ``periods_kind_2()`` and ``abel_map_kind_2()`` require compatible forms bound

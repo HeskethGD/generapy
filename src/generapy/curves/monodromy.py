@@ -100,7 +100,14 @@ def _radial_plane_curve_monodromy(
         if continuation.permutation is None:
             raise ValueError("radial monodromy paths must be closed")
         if continuation.permutation == tuple(range(curve.y_degree)):
-            raise ValueError("finite branch loop has identity monodromy")
+            # Resultant zeros also include zeros of the leading coefficient.
+            # A sheet can have an unramified pole there, giving identity
+            # monodromy. Retain that generator in the product and diagnostics.
+            leading_terms = tuple(c * point**i for i, j, c in curve.terms
+                                  if j == curve.y_degree)
+            scale = ctx.fsum(abs(term) for term in leading_terms)
+            if abs(ctx.fsum(leading_terms)) > 100 * ctx.eps * scale:
+                raise ValueError("finite branch loop has identity monodromy")
         finite_generators.append(_BranchGenerator(
             kind="finite",
             value=point,

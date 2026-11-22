@@ -100,21 +100,19 @@ def _period_matrix_from_columns(ctx, columns, start, count, genus):
     ])
 
 
-def _normalized_differentials(ctx, differentials, a_periods):
+def _normalized_basis_evaluator(ctx, differentials, a_periods):
+    """Evaluate each original form once before normalizing the whole basis."""
     inverse = a_periods ** -1
-    result = []
-    for row in range(len(differentials)):
-        coefficients = tuple(
-            inverse[row, column]
-            for column in range(len(differentials)))
+    coefficients = tuple(tuple(inverse[row, column]
+                               for column in range(len(differentials)))
+                         for row in range(len(differentials)))
 
-        def differential(x, y, coefficients=coefficients):
-            return ctx.fsum(
-                coefficient * form(x, y)
-                for coefficient, form in zip(coefficients, differentials))
+    def evaluate(x, y):
+        values = tuple(form(x, y) for form in differentials)
+        return tuple(ctx.fsum(coefficient * value for coefficient, value in zip(row, values))
+                     for row in coefficients)
 
-        result.append(differential)
-    return tuple(result)
+    return evaluate
 
 
 def _riemann_constant_from_iterated_cycles(ctx, tau, cycle_integrals):
@@ -237,7 +235,7 @@ def _guarded_open_path(ctx, start, end, branch_points):
 
 def _finite_geometric_abel_value(ctx, curve, data, place, differentials,
                                  quadrature_cache=None, edge_cache=None,
-                                 check_convergence=False):
+                                 check_convergence=False, edge_integrator=None):
     """Integrate from the geometric root to a validated regular finite place.
 
     The open lift starts with all sheets in the root fibre. A tree connector
@@ -274,7 +272,8 @@ def _finite_geometric_abel_value(ctx, curve, data, place, differentials,
     for index, orientation in connector:
         edge = graph.edges[index]
         if index not in edges:
-            edges[index] = integrate(cover.continuations[edge.base_edge], edge.sheet)
+            edges[index] = (integrate(cover.continuations[edge.base_edge], edge.sheet)
+                            if edge_integrator is None else edge_integrator(index))
         pieces.append(tuple(orientation * value for value in edges[index]))
     return tuple(ctx.fsum(piece[i] for piece in pieces)
                  for i in range(len(differentials)))

@@ -65,3 +65,8 @@ implementations.
    *Bilinear recurrences and addition formulae for hyperelliptic sigma functions*.
    Journal of Nonlinear Mathematical Physics **12**, Supplement 2 (2005), 46–62.
    `Full text <https://www.atlantis-press.com/article/403.pdf>`_.
+
+.. [McMullenRS] C. McMullen. *Complex Analysis on Riemann Surfaces*.
+                 Harvard University, Math 213b lecture notes, Section 13,
+                 "Smooth plane curves" and "Explicit computation of Omega(X)".
+                 https://people.math.harvard.edu/~ctm/home/text/class/harvard/213b/19/html/home/course/course.pdf

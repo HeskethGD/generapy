@@ -187,8 +187,9 @@ def test_geometric_abel_theta_divisor_and_base_change(terms, genus):
                 assert abs(rtheta(reduced, tau, ctx=mp)) < mp.mpf('1e-12')
 
 
-def test_geometric_abel_divisor_shares_only_operation_local_caches(monkeypatch):
+def test_geometric_abel_divisor_reuses_edges_but_keeps_open_rules_local(monkeypatch):
     import generapy.curves.jacobian as jacobian
+    from generapy.curves import _stages as stages
     from generapy.curves._stages import _geometric_abel_divisor
 
     with mp.workdps(18):
@@ -203,23 +204,28 @@ def test_geometric_abel_divisor_shares_only_operation_local_caches(monkeypatch):
         original = jacobian._integrate_plane_curve_path
         edge_calls, rules = [], []
 
-        def counted(*args, **kwargs):
+        def counted_open(*args, **kwargs):
             rules.append(kwargs['quadrature_cache'])
-            if id(args[2]) in cover_ids:
-                edge_calls.append((id(args[2]), kwargs['sheet']))
             return original(*args, **kwargs)
 
-        monkeypatch.setattr(jacobian, '_integrate_plane_curve_path', counted)
+        def counted_edge(*args, **kwargs):
+            assert id(args[2]) in cover_ids
+            edge_calls.append((id(args[2]), kwargs['sheet']))
+            return original(*args, **kwargs)
+
+        stages._stage_geometric_abel_edge.cache_clear()
+        monkeypatch.setattr(jacobian, '_integrate_plane_curve_path', counted_open)
+        monkeypatch.setattr(stages, '_integrate_plane_curve_path', counted_edge)
         actual = _geometric_abel_divisor(mp, curve, (other, other))
         assert mp.norm(mp.matrix(actual)-2*mp.matrix(expected)) < mp.mpf('1e-16')
         assert edge_calls and len(edge_calls) == len(set(edge_calls))
         assert all(rule is rules[0] for rule in rules)
-        count, first_rules = len(edge_calls), rules[0]
+        first_rules = rules[0]
         edge_calls.clear()
         rules.clear()
         actual = _geometric_abel_divisor(mp, curve, (other, other), base_place=other)
         assert mp.norm(mp.matrix(actual)) == 0
-        assert len(edge_calls) == count
+        assert not edge_calls
         assert all(rule is rules[0] for rule in rules)
         assert rules[0] is not first_rules
 

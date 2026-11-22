@@ -6,7 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Automatic first-kind adjoint bases for smooth plane models whose computed
+  genus reaches the plane degree bound, even with a degenerate Newton edge
+  (#30).
+
+### Changed
+
+- Accelerate general-curve topology, periods, Abel maps and Riemann constants
+  with relative-motion continuation, shared basis evaluation, reusable connector
+  integrals and independent quadrature panels. Retain sheet-label and precision
+  checks and the existing acceptance route for short paths (#33).
+
 ### Fixed
+
+- Allow unramified sheet poles in radial monodromy diagnostics and use each
+  sheet's own separation when refining continuation steps (#29).
 
 - Preserve genuine small polynomial coefficients during resultant division and
   squarefree reduction, and use relative trimming for scaled curve equations
