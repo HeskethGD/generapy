@@ -14,9 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- Reuse geometric Abel-map connector edge integrals across calls with a bounded,
-  precision- and basis-aware cache; open paths and chart tails are still
-  integrated for each target (partial #33).
+- Accelerate general-curve first-kind periods and repeated Abel maps by reusing
+  connector integrals and separating quadrature panels from fine continuation
+  meshes. Retain sheet-label checks, guarded node evaluation and the existing
+  short-path integration route (#33).
 
 ### Fixed
 

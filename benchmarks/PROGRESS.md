@@ -22,6 +22,64 @@ Each entry should include:
 
 <!-- Entries will be added as releases occur and optimizations are made -->
 
+### Unreleased: measured genus-four pipeline improvements (#33, 2026-11-22)
+
+Compared committed snapshots of pre-PR main (`b8c8f02`), connector caching
+(`79c4add`) and the final integration policy (`e6d000b`) on the actual
+[issue #33 spectral quintic](https://github.com/HeskethGD/generapy/issues/33).
+The rational polynomial is coordinate-swapped to be monic in y, with the four
+supplied first-kind forms from the issue. No polynomial workaround is used.
+
+Each revision ran in an isolated process on the same macOS ARM64 machine,
+Python 3.14.7 and mpmath 1.4.1, at 20 decimal digits. Source snapshots were
+unchanged while timing; no other benchmark instances ran concurrently.
+One cold genus setup was followed by periods, an Abel map to
+`fibre(3.3+1.7j)[0]`, the identical request, and a nearby target
+`fibre(3.31+1.71j)[0]`. Abel reduction was disabled. These are focused single-run
+issue measurements, not a comprehensive release baseline.
+
+| Operation (seconds) | Pre-PR main | Connector cache | Final policy |
+| --- | ---: | ---: | ---: |
+| Cold genus/cover setup | 41.02 | 42.42 | 41.62 |
+| First-kind periods after genus | 155.51 | 154.78 | 12.59 |
+| First Abel call after periods | 43.29 | 43.22 | 7.73 |
+| Repeated Abel call | 43.42 | 21.34 | 6.76 |
+| Nearby-point Abel call | 43.06 | 21.38 | 6.80 |
+
+The final policy reduces period integration after setup by about 12.4x and
+repeated Abel evaluation by about 6.4x. Including cold genus setup, obtaining
+periods falls from about 197 s to 54 s. Connector reuse removes roughly 22 s
+per repeated call. The remaining open lift has 1,079 continuation intervals;
+quadrature now uses panels on its straight spans, retaining those fine
+samples for branch labels. Guarded node evaluation meets caller-precision
+convergence checks. Short spans keep their existing integration route.
+
+Final Abel values differ from pre-PR main by less than `2.1e-22`. A 30-digit
+reference at `2d143b9` (the guarded panel integrator before short-path
+selection) differs from the final 20-digit Abel values by at most `2.5e-22`.
+Scaled matrix differences, using norm(error)/max(1,norm(reference)), are below
+`5e-21` for the two half-period matrices and `2.3e-20` for tau. The imaginary
+part of tau is positive-definite at both precisions. Base-point subtraction
+has residual below `2e-22` at 20 digits and `2.2e-32` in the reference run.
+
+A matched Fermat-quartic control compared `79c4add` with `e6d000b`: four
+process blocks per revision in alternating order, each with one initial batch
+and six warm batches of four Abel maps. Pooled warm medians are 0.1487 s and
+0.1491 s. All 24 warm samples per revision are retained; ranges were
+0.1475–0.1778 s and 0.1481–0.2508 s, respectively. The large short-path
+penalty seen during development is avoided; this control shows no material
+median change, with some timing variability.
+
+Validation includes 528 passing curve tests and a warnings-as-errors HTML
+build, with regressions for mesh-density independence, winding and sheet
+labels, stored-lift precision, and nearby-pole rejection.
+
+Remaining work is separate: cold cover construction still takes about 42 s,
+and full-fibre open continuation accounts for about 5.7 s of each 6.8 s warm
+Abel call. Riemann-constant iterated integration and radial monodromy were
+not remeasured or optimized by this integration change. Further reductions
+there should be profiled and tracked as specific follow-ups.
+
 ### Unreleased: geometric Abel connector reuse (#33, 2026-11-21)
 
 Exploratory measurements on the Fermat quartic at 20 decimal digits compared
