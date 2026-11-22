@@ -43,6 +43,23 @@ mathematics tools are launched. Seven samples are collected per numerical
 workload and three per curve/revision by default; the complete run can take
 several minutes.
 
+To measure the general-curve operations optimized for issue #33 without
+rerunning that suite:
+
+```sh
+python -m benchmarks.benchmark_general_curve_pipeline --after v0.3.0 \
+  --dps 20 30 --trials 3 --output /tmp/generapy-pipeline.json \
+  --report /tmp/generapy-pipeline.md
+```
+
+This separately measures cold genus/cover setup, periods after genus, first,
+repeated and nearby-point Abel maps, and Riemann constants on the supplied-basis
+genus-four fixture. Each trial uses a fresh process and archived committed
+source; accuracy checks follow timing. Add `--before REV` for a fresh matched
+comparison. Omitting it measures only the candidate, so existing historical
+results can remain clearly labelled without being rerun. Choose new output
+paths. The historical curve catalogue remains unchanged for continuity.
+
 Use `--groups`, `--filter`, `--theta-dps`, `--repeats` and `--curve-repeats` for bounded runs,
 or `--reverse-order` to reverse which revision runs first in each alternating
 pair. Output paths must be new. Raw reports are experimental; use their matched
