@@ -22,6 +22,25 @@ Each entry should include:
 
 <!-- Entries will be added as releases occur and optimizations are made -->
 
+### v0.3.0 focused pipeline baseline addition (2026-11-22)
+
+**Report:** [fresh general-curve pipeline measurements](baselines/v0.3.0/pipeline_fresh.md).
+
+Added `benchmark_general_curve_pipeline` as an independent, repeatable benchmark
+for the issue #33 supplied-basis genus-four workload. Only this addition was
+run: three fresh-process trials at each of 20 and 30 digits against the existing
+v0.3.0 tag (`2319e88`). The established 268-configuration comparison and its
+results were not rerun or changed.
+
+At 20 digits, median times are 1.61 s for cold genus/cover setup, 10.92 s for
+periods after genus, 2.23 s for the first Abel map, 1.37 s for a repeated map,
+1.38 s for a nearby-point map and 6.76 s for Riemann constants after Abel maps.
+All six trials pass validation; maximum scaled difference across 20/30-digit
+outputs is approximately `4.1e-20`. The fresh timings reproduce the optimized
+development measurements. Historical pre-fix comparisons remain separately
+labelled, rather than being presented as newly matched runs. The harness
+supports `--before REV` when a fresh two-revision comparison is needed.
+
 ### v0.3.0 release-candidate baselines (2026-11-22)
 
 **Reports:** [protocol and summary](baselines/v0.3.0/README.md),

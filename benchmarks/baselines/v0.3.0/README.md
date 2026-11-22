@@ -33,6 +33,14 @@ release. Individual increases and measurement variability are retained below.
 - [Theta, genus-one, mixed-jet and BA tables](theta_and_ba.md)
 - [All 26 curve cases at 30 and 50 digits](curve_periods.md)
 - [Targeted genus-four pipeline profile and new-support checks](general_curve_pipeline.md)
+- [Fresh v0.3.0 general-curve pipeline trials](pipeline_fresh.md)
+
+The historical catalogue excludes the difficult issue #33 curve and does not
+measure first/repeated Abel maps or Riemann constants. Its broadly unchanged
+timings establish stability for those existing workloads. The separate pipeline
+benchmark covers the optimized workload: six fresh v0.3.0 trials reproduce the
+optimized development timings. The historical pre-fix comparison remains
+separately labelled; it was not rerun to create this addition.
 
 ## Largest measured ratios
 

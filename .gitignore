@@ -23,5 +23,6 @@ benchmarks/**/*.md
 !benchmarks/PROGRESS.md
 !benchmarks/baselines/**/*.md
 benchmarks/**/.run.lock
+benchmarks/**/.general-curve-pipeline.lock
 benchmarks/**/.sage-cache/
 benchmarks/**/.sage-period-benchmark/

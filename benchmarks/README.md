@@ -20,7 +20,11 @@ benchmarks/
 
 The [v0.3.0 release-candidate baselines](baselines/v0.3.0/README.md) compare
 all established workloads against the published v0.2.0 tag and include the
-genus-four pipeline profile. The [v0.2.0 pre-release record](baselines/v0.2.0/README.md) contains matched
+genus-four pipeline profile. The [fresh v0.3.0 pipeline measurements](baselines/v0.3.0/pipeline_fresh.md)
+add six trials covering the difficult genus-four setup, periods, Abel maps and
+Riemann constants. The historical catalogue does not measure these Abel-map
+workloads, so its unchanged timings do not contradict the targeted gains.
+The [v0.2.0 pre-release record](baselines/v0.2.0/README.md) contains matched
 Generapy revision comparisons and context against the saved v0.1.0 timings.
 The [integration follow-up](baselines/v0.2.0/integration.md) records the later
 chart and finite-base Abel profiling and optimizations for issues #9/#10.
