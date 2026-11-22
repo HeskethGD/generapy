@@ -450,3 +450,13 @@ def test_implicit_sheet_translation_preserves_labels_and_continuation_work():
     assert translated.steps <= original.steps + 2
     assert all(abs(a-(20+b)) < 10000*ctx.eps*20
                for a, b in zip(translated.sheets, original.sheets))
+
+
+def test_absolute_motion_safe_steps_keep_their_original_acceptance():
+    ctx = mp.clone()
+    ctx.dps = 25
+    curve = _prepare_plane_curve(ctx, {(0, 2): 1, (1, 0): -1})
+    result = continuation._continue_plane_curve_sheets_adaptive(
+        ctx, curve, (1, 2), initial_sheets=(-1, 1), max_refinements=0)
+    assert result.steps == 1 and result.refinements == 0
+    assert result.sheets == (-ctx.sqrt(2), ctx.sqrt(2))

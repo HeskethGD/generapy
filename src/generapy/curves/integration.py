@@ -216,6 +216,20 @@ def _straight_lifted_pieces(ctx, continuation):
         start = end
 
 
+def _has_large_shared_sheet_motion(ctx, pieces):
+    """Recognize coarse intervals retained by relative-motion continuation."""
+    fraction = ctx.mpf('0.4')
+    for piece in pieces:
+        for left, right in zip(piece.fibres, piece.fibres[1:]):
+            motion = tuple(abs(a-b) for a, b in zip(left, right))
+            for i in range(len(left)):
+                for j in range(i):
+                    gap = min(abs(left[i]-left[j]), abs(right[i]-right[j]))
+                    if max(motion[i], motion[j]) > fraction * gap:
+                        return True
+    return False
+
+
 def _integrate_geometric_callable_path(
         ctx, curve, continuation, differentials, sheet, branch_values,
         rules, check_convergence, differential_evaluator):
@@ -226,7 +240,8 @@ def _integrate_geometric_callable_path(
     pieces = tuple(_straight_lifted_pieces(ctx, continuation))
     # Short lifts already have an inexpensive node-continuation fast path.
     # Amortize guarded panel setup only on densely subdivided straight spans.
-    if not any(len(piece.path) - 1 >= 32 for piece in pieces):
+    if (not any(len(piece.path) - 1 >= 32 for piece in pieces)
+            and not _has_large_shared_sheet_motion(ctx, pieces)):
         return None
     with ctx.extraprec(40):
         result = _integrate_geometric_callable_path_working(

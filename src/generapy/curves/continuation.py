@@ -26,6 +26,7 @@ from .polynomial import (
     _plane_curve_sheet_separation_bound,
     _plane_polynomial_y_coefficients_with_x_derivative,
     _polynomial_derivative,
+    _polynomial_trim,
 )
 
 # Base-plane paths
@@ -144,6 +145,7 @@ def _predict_plane_curve_sheets(ctx, curve, x, next_x, sheets):
     threshold = ctx.sqrt(ctx.eps)
     coefficients, derivative_x_coefficients = (
         _plane_polynomial_y_coefficients_with_x_derivative(ctx, curve, x))
+    derivative_x_coefficients = _polynomial_trim(ctx, derivative_x_coefficients)
     derivative_y_coefficients = _polynomial_derivative(ctx, coefficients)
     for sheet in sheets:
         derivative_x = ctx.polyval(derivative_x_coefficients, sheet, asc=True)
@@ -253,7 +255,12 @@ def _continue_plane_curve_sheets_adaptive(
                     if abs(after - before) > motion_fraction * gap:
                         motion_ok = False
             separation = min(gaps)
-            acceptable = motion_ok and all(
+            # Preserve every step accepted by the original absolute-motion
+            # check; the relative check additionally permits shared motion.
+            absolute_motion_ok = all(
+                abs(value - sheet) <= motion_fraction * gap
+                for value, sheet, gap in zip(next_sheets, sheets, gaps))
+            acceptable = (absolute_motion_ok or motion_ok) and all(
                 abs(value - prediction) <= correction_fraction * gap
                 for value, prediction, gap in zip(next_sheets, predictions, gaps))
         else:

@@ -464,3 +464,25 @@ def test_geometric_panel_sampler_can_fall_back_to_original_segments(monkeypatch)
         ctx, curve, lift, (lambda x, y: 1,),
         quadrature_order='geometry', branch_values=(0,))
     assert abs(result.values[0]-3) < 1000*ctx.eps
+
+
+def test_coarse_common_motion_keeps_guarded_geometric_integration():
+    ctx = mp.clone()
+    ctx.dps = 30
+    curve = _prepare_plane_curve(ctx, {
+        (0, 4): 1, (2, 2): -2, (0, 2): -2,
+        (4, 0): 1, (2, 0): -2, (0, 0): 1})
+    lift = _continue_plane_curve_sheets_adaptive(
+        ctx, curve, (100, 110), initial_sheets=(-101, -99, 99, 101),
+        max_refinements=0)
+
+    def form(x, y):
+        return 1/curve_integration._evaluate_plane_derivative(ctx, curve, x, y, 'y')
+
+    result = _integrate_plane_curve_path(
+        ctx, curve, lift, (form,), sheet=3, quadrature_order='geometry',
+        branch_values=(-1, 0, 1), check_convergence=True)
+    # On y=x+1, F_y=8*x*(x+1).
+    exact = ctx.log(ctx.mpf(110)*101/(111*100))/8
+    assert abs(result.values[0]-exact) < 1000*ctx.eps
+    assert ctx.dps == 30
