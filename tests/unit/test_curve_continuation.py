@@ -400,3 +400,17 @@ def test_edge_sampler_can_correct_nodes_above_stored_lift_precision():
         assert abs(y-ctx.root(x, 3)) < 1000*ctx.eps
         assert residual < 1000*ctx.eps
     assert ctx.dps == 20
+
+
+def test_shared_horner_predictor_matches_sparse_implicit_derivatives():
+    ctx = mp.clone()
+    ctx.dps = 40
+    curve = _prepare_plane_curve(ctx, {(0, 4): 1, (2, 3): 2,
+                                       (3, 1): -3, (2, 0): 7, (0, 0): -2})
+    x, end = ctx.mpc('.7', '.2'), ctx.mpc('.71', '.22')
+    sheets = tuple(ctx.mpc(a, b) for a, b in [(1, 2), (2, -1), (3, 1), (-1, -2)])
+    expected = tuple(y-continuation._evaluate_plane_derivative(ctx, curve, x, y, 'x')
+                     *(end-x)/continuation._evaluate_plane_derivative(ctx, curve, x, y, 'y')
+                     for y in sheets)
+    got = continuation._predict_plane_curve_sheets(ctx, curve, x, end, sheets)
+    assert all(abs(a-b) < 100*ctx.eps*max(1, abs(b)) for a, b in zip(got, expected))

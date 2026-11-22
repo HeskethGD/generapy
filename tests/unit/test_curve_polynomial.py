@@ -307,3 +307,50 @@ def test_finite_fibre_rejects_incomplete_or_invalid_roots_and_restores_precision
     with pytest.raises(ctx.NoConvergence, match="failed to resolve finite chart fibre"):
         _finite_plane_curve_sheets(ctx, curve, 0)
     assert ctx.prec == precision
+
+
+@pytest.mark.parametrize('digits', [20, 40])
+@pytest.mark.parametrize('roots', [(1, 2, 4), (1+1j, 1-1j, -2, 3, 5)])
+def test_predicted_fibres_correct_all_roots_without_a_full_solve(monkeypatch, digits, roots):
+    ctx = mp.clone()
+    ctx.dps = digits
+    coefficients = (ctx.one,)
+    for root in roots:
+        coefficients = _polynomial_multiply(ctx, coefficients, (-ctx.convert(root), 1))
+    curve = _prepare_plane_curve(ctx, {(0, i): c for i, c in enumerate(coefficients)})
+
+    def unexpected_full_solve(*args, **kwargs):
+        pytest.fail('good sheet predictions invoked the full root solver')
+
+    monkeypatch.setattr(ctx, 'polyroots', unexpected_full_solve)
+    predicted = tuple(ctx.convert(root)+ctx.mpc('.001', '.002') for root in roots)
+    got = _plane_curve_sheets(ctx, curve, 0, roots_init=predicted)
+    assert len(got) == len(roots)
+    assert all(abs(a-b) < 1000*ctx.eps*max(1, abs(b)) for a, b in zip(got, roots))
+    assert ctx.dps == digits
+
+
+@pytest.mark.parametrize('predictions,scale', [
+    ((1, 1, 1), '1'), ((0, 0, 0), '1'), ((1e20, 1e20, 1e20), '1'),
+    ((1.01, 2.01, 4.01), '1e-50'),
+])
+def test_bad_predictions_fall_back_to_a_complete_scale_invariant_fibre(
+        monkeypatch, predictions, scale):
+    ctx = mp.clone()
+    ctx.dps = 20
+    # (y-1)*(y-2)*(y-4), including a uniformly tiny equation.
+    coefficients = tuple(ctx.mpf(scale)*c for c in (-8, 14, -7, 1))
+    curve = _prepare_plane_curve(ctx, {(0, i): c for i, c in enumerate(coefficients)})
+    original = ctx.polyroots
+    calls = []
+
+    def recorded(*args, **kwargs):
+        calls.append(1)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(ctx, 'polyroots', recorded)
+    got = _plane_curve_sheets(ctx, curve, 0, roots_init=predictions)
+    assert calls and len(got) == 3
+    assert all(min(abs(value-root) for value in got) < 1000*ctx.eps
+               for root in (1, 2, 4))
+    assert ctx.dps == 20

@@ -584,6 +584,34 @@ def _plane_curve_sheets(ctx, curve, x, roots_init=None):
         denominator = 2 * quadratic
         return ((-linear - root) / denominator,
                 (-linear + root) / denominator)
+    if roots_init is not None:
+        roots_init = tuple(roots_init)
+        if len(roots_init) == curve.y_degree:
+            # Continue good predictions with independent Horner correctors.
+            # Require a complete set of distinct roots and relative residuals;
+            # a failed or coalesced prediction falls back to the full solver.
+            with ctx.extraprec(40):
+                candidates = []
+                separation_tolerance = 100 * ctx.sqrt(ctx.eps)
+                for prediction in roots_init:
+                    value, residual, unused_derivative, unused_scale, converged = (
+                        _newton_polynomial_root(ctx, coefficients, prediction, 8))
+                    if not converged or not ctx.isfinite(value):
+                        break
+                    magnitude = abs(value)
+                    bound = ctx.zero
+                    for coefficient in reversed(coefficients):
+                        bound = bound * magnitude + abs(coefficient)
+                    if abs(residual) > 100 * ctx.eps * bound:
+                        break
+                    if any(abs(value - other) <= separation_tolerance * max(
+                            ctx.one, magnitude, abs(other)) for other in candidates):
+                        break
+                    candidates.append(value)
+            if len(candidates) == curve.y_degree:
+                return tuple(+value for value in candidates)
+            # Coalesced or stalled seeds should not seed the rescue solve.
+            roots_init = None
     roots = ctx.polyroots(
         coefficients, maxsteps=100, cleanup=False, extraprec=20,
         roots_init=roots_init, asc=True)

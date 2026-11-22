@@ -24,6 +24,8 @@ from .polynomial import (
     _ordered_plane_curve_sheets,
     _plane_curve_sheets,
     _plane_curve_sheet_separation_bound,
+    _plane_polynomial_y_coefficients_with_x_derivative,
+    _polynomial_derivative,
 )
 
 # Base-plane paths
@@ -140,11 +142,12 @@ def _predict_plane_curve_sheets(ctx, curve, x, next_x, sheets):
     step = next_x - x
     predictions = []
     threshold = ctx.sqrt(ctx.eps)
+    coefficients, derivative_x_coefficients = (
+        _plane_polynomial_y_coefficients_with_x_derivative(ctx, curve, x))
+    derivative_y_coefficients = _polynomial_derivative(ctx, coefficients)
     for sheet in sheets:
-        derivative_x = _evaluate_plane_derivative(
-            ctx, curve, x, sheet, "x")
-        derivative_y = _evaluate_plane_derivative(
-            ctx, curve, x, sheet, "y")
+        derivative_x = ctx.polyval(derivative_x_coefficients, sheet, asc=True)
+        derivative_y = ctx.polyval(derivative_y_coefficients, sheet, asc=True)
         scale = max(ctx.one, abs(derivative_x), abs(derivative_y))
         if abs(derivative_y) <= threshold * scale:
             predictions.append(sheet)
