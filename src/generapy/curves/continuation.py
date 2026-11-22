@@ -170,8 +170,9 @@ def _continue_plane_curve_sheets_adaptive(
         correction_fraction=None, motion_fraction=None):
     """Continue sheets while bisecting numerically unsafe path segments.
 
-    Acceptance compares prediction error and sheet motion with each sheet's
-    local nearest-neighbour separation.  Geometry remains the caller's responsibility:
+    Acceptance compares prediction error with each sheet's nearest-neighbour
+    separation and limits changes in pairwise gaps. Common translation of
+    sheets does not force subdivision. Geometry remains the caller's responsibility:
     subdivision improves resolution but cannot repair a path through a
     critical value.
 
@@ -237,18 +238,24 @@ def _continue_plane_curve_sheets_adaptive(
             correction = max(
                 abs(value - prediction)
                 for value, prediction in zip(next_sheets, predictions))
-            # Compare each sheet with its own nearest neighbour. A remote
-            # pole sheet need not move at the scale of an unrelated close pair.
-            gaps = tuple(min(
-                (min(abs(sheet - other), abs(next_sheets[i] - next_sheets[j]))
-                 for j, other in enumerate(sheets) if i != j),
-                default=ctx.inf) for i, sheet in enumerate(sheets))
+            # Limit relative motion, so translating a close group of sheets
+            # together does not require steps at the scale of their small gap.
+            # Cross-group pairs still constrain their approach or separation.
+            gaps = [ctx.inf] * len(sheets)
+            motion_ok = True
+            for i in range(len(sheets)):
+                for j in range(i):
+                    before = sheets[i] - sheets[j]
+                    after = next_sheets[i] - next_sheets[j]
+                    gap = min(abs(before), abs(after))
+                    gaps[i] = min(gaps[i], gap)
+                    gaps[j] = min(gaps[j], gap)
+                    if abs(after - before) > motion_fraction * gap:
+                        motion_ok = False
             separation = min(gaps)
-            acceptable = all(
+            acceptable = motion_ok and all(
                 abs(value - prediction) <= correction_fraction * gap
-                and abs(value - sheet) <= motion_fraction * gap
-                for value, prediction, sheet, gap in zip(
-                    next_sheets, predictions, sheets, gaps))
+                for value, prediction, gap in zip(next_sheets, predictions, gaps))
         else:
             acceptable = False
 

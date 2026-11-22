@@ -414,3 +414,39 @@ def test_shared_horner_predictor_matches_sparse_implicit_derivatives():
                      for y in sheets)
     got = continuation._predict_plane_curve_sheets(ctx, curve, x, end, sheets)
     assert all(abs(a-b) < 100*ctx.eps*max(1, abs(b)) for a, b in zip(got, expected))
+
+
+def test_common_motion_of_close_sheet_groups_does_not_force_subdivision():
+    ctx = mp.clone()
+    ctx.dps = 25
+    # ((y-x)**2-1)*((y+x)**2-1): two close pairs translate in opposite
+    # directions. Each pair's internal gap stays fixed, and the change in
+    # cross-pair gaps is small relative to their large separation.
+    curve = _prepare_plane_curve(ctx, {
+        (0, 4): 1, (2, 2): -2, (0, 2): -2,
+        (4, 0): 1, (2, 0): -2, (0, 0): 1})
+    result = continuation._continue_plane_curve_sheets_adaptive(
+        ctx, curve, (100, 110), initial_sheets=(-101, -99, 99, 101),
+        max_refinements=0)
+    assert result.steps == 1 and result.refinements == 0
+    assert all(abs(a-b) < 10000*ctx.eps for a, b in
+               zip(result.sheets, (-111, -109, 109, 111)))
+
+
+def test_implicit_sheet_translation_preserves_labels_and_continuation_work():
+    ctx = mp.clone()
+    ctx.dps = 40
+    # Translate the irreducible cover y**3=x by y -> y+20*x.
+    base = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
+    shifted = _prepare_plane_curve(ctx, {
+        (0, 3): 1, (1, 2): -60, (2, 1): 1200,
+        (3, 0): -8000, (1, 0): -1})
+    path = tuple(map(ctx.convert, (1, 1+1j, 2, 1)))
+    original = continuation._continue_plane_curve_sheets_adaptive(ctx, base, path)
+    translated = continuation._continue_plane_curve_sheets_adaptive(
+        ctx, shifted, path,
+        initial_sheets=tuple(20+value for value in original.fibres[0]))
+    assert translated.permutation == original.permutation
+    assert translated.steps <= original.steps + 2
+    assert all(abs(a-(20+b)) < 10000*ctx.eps*20
+               for a, b in zip(translated.sheets, original.sheets))
