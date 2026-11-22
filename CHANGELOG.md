@@ -14,10 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- Accelerate general-curve first-kind periods and repeated Abel maps by reusing
-  connector integrals and separating quadrature panels from fine continuation
-  meshes. Retain sheet-label checks, guarded node evaluation and the existing
-  short-path integration route (#33).
+- Accelerate general-curve topology, periods, Abel maps and Riemann constants
+  with relative-motion continuation, shared basis evaluation, reusable connector
+  integrals and independent quadrature panels. Retain sheet-label and precision
+  checks and the existing acceptance route for short paths (#33).
 
 ### Fixed
 
