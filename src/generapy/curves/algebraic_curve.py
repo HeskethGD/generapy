@@ -230,9 +230,11 @@ class Curve:
         r"""Return the finite branch locus of a plane algebraic curve.
 
         The returned ``CurveBranchLocus`` record contains the degree of the
-        ``x`` projection, the distinct finite branch values above which the
-        projection ramifies, and the ascending coefficients of the
-        y-derivative resultant whose roots they are.  Ramification above
+        ``x`` projection, distinct finite critical candidates, and the
+        ascending coefficients of the y-derivative resultant whose roots they
+        are. For non-monic projections, candidates also include values where
+        the leading coefficient vanishes; an unramified sheet pole there
+        need not be a branch point.  Ramification above
         infinity is reported by :attr:`Curve.monodromy` instead,
         because it requires monodromy rather than the resultant alone.
 
@@ -263,7 +265,10 @@ class Curve:
         permutation system, and the minimum geometric clearance of the
         continuation paths.
 
-        The sheet labels refer to the internally selected base fibre.  The
+        For non-monic projections, finite generators also include degree-drop
+        candidates from the resultant. An unramified sheet pole can have an
+        identity permutation; ramified poles retain nontrivial monodromy.
+        The sheet labels refer to the internally selected base fibre. The
         routing continuations used to compute them are private.
 
         Each finite branch value of the lemniscatic curve
@@ -356,7 +361,9 @@ class Curve:
 
         Uses the ordered first-kind basis bound at construction. If no basis
         was supplied, hyperelliptic curves get ``x**k dx/z`` in Baker marking;
-        other supported curves get a basis from Newton polygon interior points.
+        other supported curves use Newton polygon interior points or the
+        smooth plane-curve adjoint fallback described in
+        :ref:`automatic-first-kind-bases`.
         Supplying either basis at construction selects geometric-polygon marking,
         using an automatic geometric first-kind basis if necessary.
         See :ref:`custom-differential-bases` for definitions and a worked example.

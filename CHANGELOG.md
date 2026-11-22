@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-22
+
+### Summary
+
+Generapy constructs automatic first-kind bases for more smooth plane curves
+and handles non-monic monodromy, scaled equations and difficult chart fibres
+more reliably. General-curve topology, periods, Abel maps and Riemann constants
+are faster, with substantial gains in the tested genus-four example. Existing
+public function signatures and coordinate conventions are retained.
+
 ### Added
 
 - Automatic first-kind adjoint bases for smooth plane models whose computed

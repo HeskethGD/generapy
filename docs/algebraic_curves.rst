@@ -2,7 +2,7 @@ Algebraic curves
 ----------------
 
 The algebraic-curve module provides numerical computations with supported
-smooth plane curves. It computes branch loci, monodromy, genus, homology,
+plane polynomial models. It computes branch loci, monodromy, genus, homology,
 period matrices, Riemann constants, Abel maps, and integrals. The results are
 used with the higher-genus theta and Kleinian functions documented in
 :doc:`abelian`.
@@ -122,6 +122,8 @@ including the :doc:`Neumann–Moser <examples/neumann_moser>` and
 :doc:`Ônishi example <examples/onishi>` uses this engine for genus-two
 periods and Abel maps.
 
+.. _automatic-first-kind-bases:
+
 Geometric polygon engine
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -163,10 +165,33 @@ and then by :math:`i`. This includes smooth curves with repeated roots in a
 Newton face. Lower-genus models with degenerate edges still require supplied
 forms; general adjoint conditions at singularities are not constructed.
 
+For example, the smooth quartic
+:math:`(x^2-y^2)^2+x^3+y+1=0` has a repeated Newton face but its first-kind
+basis is constructed automatically::
+
+   >>> ctx = mp.clone()
+   >>> ctx.dps = 20
+   >>> quartic = Curve({(4, 0): 1, (2, 2): -2, (0, 4): 1,
+   ...                  (3, 0): 1, (0, 1): 1, (0, 0): 1}, ctx=ctx)
+   >>> basis = quartic.resolved_differentials_kind_1()
+   >>> len(basis.forms), basis.engine, basis.source
+   (3, 'general', 'automatic')
+
 **Second-kind construction is not automatic in this engine.**
 ``periods_kind_2()`` and ``abel_map_kind_2()`` require compatible forms bound
 through ``differentials_kind_2``. Without them, these methods raise an error.
 First-kind calculations do not require them.
+
+The geometric engine also handles non-monic projections, including finite
+values where the leading coefficient in :math:`y` vanishes and a sheet
+escapes to infinity. These values are included among the resultant's critical
+candidates. An unramified sheet pole can have identity monodromy; a ramified
+pole still exchanges sheets. For example::
+
+   >>> nonmonic = Curve({(1, 2): 1, (0, 1): 1, (3, 0): -1, (0, 0): 1}, ctx=ctx)
+   >>> monodromy = nonmonic.monodromy
+   >>> monodromy.genus, (0, 1) in monodromy.permutations
+   (1, True)
 
 Resolved differential bases (advanced)
 """"""""""""""""""""""""""""""""""""""
