@@ -100,21 +100,19 @@ def _period_matrix_from_columns(ctx, columns, start, count, genus):
     ])
 
 
-def _normalized_differentials(ctx, differentials, a_periods):
+def _normalized_basis_evaluator(ctx, differentials, a_periods):
+    """Evaluate each original form once before normalizing the whole basis."""
     inverse = a_periods ** -1
-    result = []
-    for row in range(len(differentials)):
-        coefficients = tuple(
-            inverse[row, column]
-            for column in range(len(differentials)))
+    coefficients = tuple(tuple(inverse[row, column]
+                               for column in range(len(differentials)))
+                         for row in range(len(differentials)))
 
-        def differential(x, y, coefficients=coefficients):
-            return ctx.fsum(
-                coefficient * form(x, y)
-                for coefficient, form in zip(coefficients, differentials))
+    def evaluate(x, y):
+        values = tuple(form(x, y) for form in differentials)
+        return tuple(ctx.fsum(coefficient * value for coefficient, value in zip(row, values))
+                     for row in coefficients)
 
-        result.append(differential)
-    return tuple(result)
+    return evaluate
 
 
 def _riemann_constant_from_iterated_cycles(ctx, tau, cycle_integrals):

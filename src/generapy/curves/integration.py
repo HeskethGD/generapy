@@ -496,12 +496,14 @@ def _gauss_indefinite_matrix(ctx, parameters, weights):
 def _integrate_plane_curve_path_iterated(
         ctx, curve, continuation, differentials, sheet=0,
         quadrature_order=None, branch_values=None,
-        quadrature_cache=None):
+        quadrature_cache=None, differential_evaluator=None):
     """Integrate forms and their ordered pairwise iterated integrals."""
     differentials = tuple(differentials)
     if not differentials or any(not callable(value)
                                 for value in differentials):
         raise ValueError("differentials must be a sequence of callables")
+    if differential_evaluator is not None and not callable(differential_evaluator):
+        raise ValueError("differential_evaluator must be callable")
     if not isinstance(sheet, int) or not 0 <= sheet < curve.y_degree:
         raise ValueError("sheet must index the initial fibre")
     geometric = quadrature_order == "geometry"
@@ -550,8 +552,12 @@ def _integrate_plane_curve_path_iterated(
         samples = []
         for x, y, residual in lifted_samples:
             max_sheet_residual = max(max_sheet_residual, residual)
-            samples.append(tuple(
-                differential(x, y) for differential in differentials))
+            values_at_node = (tuple(form(x, y) for form in differentials)
+                              if differential_evaluator is None else
+                              tuple(differential_evaluator(x, y)))
+            if len(values_at_node) != count:
+                raise ValueError("differential_evaluator returned the wrong number of values")
+            samples.append(values_at_node)
 
         local_primitives = tuple(tuple(
             delta_x * ctx.fsum(
@@ -581,7 +587,8 @@ def _integrate_plane_curve_path_iterated(
 
 
 def _integrate_geometric_loops_iterated(
-        ctx, curve, cover, graph, polygon, loops, differentials):
+        ctx, curve, cover, graph, polygon, loops, differentials, *,
+        differential_evaluator=None):
     """Compose ordered based loops, integrating each lifted edge only once.
 
     Connectors must remain in the words: their additive cancellation does
@@ -607,7 +614,7 @@ def _integrate_geometric_loops_iterated(
                     differentials, sheet=edge.sheet,
                     quadrature_order="geometry",
                     branch_values=cover.geometry.branch_values,
-                    quadrature_cache=rules)
+                    quadrature_cache=rules, differential_evaluator=differential_evaluator)
             piece = edges[index]
             if orientation == -1:
                 piece = _reverse_iterated_path_integrals(ctx, piece)

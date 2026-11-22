@@ -486,3 +486,42 @@ def test_coarse_common_motion_keeps_guarded_geometric_integration():
     exact = ctx.log(ctx.mpf(110)*101/(111*100))/8
     assert abs(result.values[0]-exact) < 1000*ctx.eps
     assert ctx.dps == 30
+
+
+def test_normalized_iterated_integrals_evaluate_each_basis_form_once_per_node():
+    ctx = mp.clone()
+    ctx.dps = 30
+    curve = _prepare_plane_curve(ctx, {(0, 2): 1, (1, 0): -1})
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, (1, 4))
+    calls = [0, 0]
+
+    def first(x, y):
+        calls[0] += 1
+        return ctx.one
+
+    def second(x, y):
+        calls[1] += 1
+        return x
+
+    forms = (first, second)
+    evaluate = curve_jacobian._normalized_basis_evaluator(ctx, forms, ctx.matrix([[1, 2], [3, 5]]))
+    result = _integrate_plane_curve_path_iterated(
+        ctx, curve, lift, forms, sheet=1, quadrature_order=24,
+        differential_evaluator=evaluate)
+    assert calls == [24*lift.steps, 24*lift.steps]
+    assert abs(result.values[0]) < 1000*ctx.eps
+    assert abs(result.values[1]-ctx.mpf(3)/2) < 1000*ctx.eps
+    expected = ((0, ctx.mpf(9)/4), (-ctx.mpf(9)/4, ctx.mpf(9)/8))
+    assert all(abs(a-b) < 10000*ctx.eps for row, want in zip(result.iterated, expected)
+               for a, b in zip(row, want))
+
+
+def test_iterated_integral_validates_shared_evaluation():
+    ctx = mp.clone()
+    curve = _prepare_plane_curve(ctx, {(0, 2): 1, (1, 0): -1})
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, (1, 2))
+    for evaluator, message in ((1, 'must be callable'),
+                               (lambda x, y: (1, 2), 'wrong number of values')):
+        with pytest.raises(ValueError, match=message):
+            _integrate_plane_curve_path_iterated(
+                ctx, curve, lift, (lambda x, y: 1,), differential_evaluator=evaluator)

@@ -26,7 +26,7 @@ from .integration import (
 from .jacobian import (
     _finite_geometric_abel_value,
     _normalize_curve_endpoint,
-    _normalized_differentials,
+    _normalized_basis_evaluator,
     _riemann_constant_from_iterated_cycles,
 )
 from .homology import (
@@ -192,11 +192,11 @@ def _geometric_riemann_constant(ctx, curve, forms=None):
         tau = (raw_tau + raw_tau.T) / 2
         if forms is None:
             forms = tuple(_baker_callable(ctx, data.basis, i) for i in range(genus))
-        normalized = _normalized_differentials(ctx, forms, a_periods)
+        evaluate_normalized = _normalized_basis_evaluator(ctx, forms, a_periods)
         polygon = data.polygon.polygon
         cycles = _integrate_geometric_loops_iterated(
             ctx, curve, data.cover, data.graph, polygon,
-            polygon.a_loops, normalized)
+            polygon.a_loops, forms, differential_evaluator=evaluate_normalized)
         value = _riemann_constant_from_iterated_cycles(ctx, tau, cycles)
     return tuple(+entry for entry in value), cycles
 
