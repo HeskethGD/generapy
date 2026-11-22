@@ -424,7 +424,9 @@ def test_geometric_panels_preserve_corners_winding_and_sheet_labels():
     ctx = mp.clone()
     ctx.dps = 25
     curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
-    path = tuple(ctx.exp(2*ctx.j*ctx.pi*i/12) for i in range(13))
+    corners = tuple(ctx.exp(2*ctx.j*ctx.pi*i/12) for i in range(13))
+    path = tuple(a+(b-a)*j/32 for a, b in zip(corners, corners[1:])
+                 for j in range(32)) + (corners[-1],)
     lift = _continue_plane_curve_sheets_adaptive(ctx, curve, path)
     sheet = min(range(3), key=lambda i: abs(lift.fibres[0][i]-1))
     result = _integrate_plane_curve_path(
@@ -439,7 +441,8 @@ def test_geometric_panels_still_reject_an_unmodelled_nearby_pole():
     ctx = mp.clone()
     ctx.dps = 25
     curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
-    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, (1, 4))
+    path = tuple(1+ctx.mpf(3)*i/128 for i in range(129))
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, path)
     with pytest.raises(ctx.NoConvergence, match='path quadrature'):
         _integrate_plane_curve_path(
             ctx, curve, lift, (lambda x, y: 1/(x-ctx.mpc('2.5', '.001')),),
@@ -450,7 +453,8 @@ def test_geometric_panel_sampler_can_fall_back_to_original_segments(monkeypatch)
     ctx = mp.clone()
     ctx.dps = 25
     curve = _prepare_plane_curve(ctx, {(0, 3): 1, (1, 0): -1})
-    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, (1, 4))
+    path = tuple(1+ctx.mpf(3)*i/128 for i in range(129))
+    lift = _continue_plane_curve_sheets_adaptive(ctx, curve, path)
 
     def unresolved_collinearity(*args, **kwargs):
         raise ValueError('straight ordered path unresolved at this precision')

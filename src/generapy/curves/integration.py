@@ -224,6 +224,10 @@ def _integrate_geometric_callable_path(
     # while evaluating nodes with guard bits, retaining the existing labels.
     tolerance = 100 * ctx.eps
     pieces = tuple(_straight_lifted_pieces(ctx, continuation))
+    # Short lifts already have an inexpensive node-continuation fast path.
+    # Amortize guarded panel setup only on densely subdivided straight spans.
+    if not any(len(piece.path) - 1 >= 32 for piece in pieces):
+        return None
     with ctx.extraprec(40):
         result = _integrate_geometric_callable_path_working(
             ctx, curve, continuation, differentials, sheet, branch_values,
